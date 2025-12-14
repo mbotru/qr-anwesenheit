@@ -23,8 +23,9 @@ CREDS = Credentials.from_service_account_file(
 
 gc = gspread.authorize(CREDS)
 
-SHEET_NAME = "Anwesenheit QR"
-sheet = gc.open(SHEET_NAME).sheet1
+SPREADSHEET_ID = "1AbCDefGhIJkLmNoPqRsTuvwXYZ"
+sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+
 
 
 # =======================
