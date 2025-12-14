@@ -1,6 +1,7 @@
 flask
-gunicorn 
-openpyxl
+gunicorn
 geopy
 qrcode
 pillow
+gspread
+google-auth
