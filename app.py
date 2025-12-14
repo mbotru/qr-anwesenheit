@@ -5,6 +5,17 @@ import qrcode
 import gspread
 from google.oauth2.service_account import Credentials
 import os
+import json
+import gspread
+from google.oauth2.service_account import Credentials
+import os
+
+creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
+
+scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+
+gc = gspread.authorize(creds)
 
 app = Flask(__name__)
 
