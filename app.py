@@ -1,161 +1,60 @@
-from flask import Flask, request, render_template_string, send_file
+from flask import Flask, request, jsonify
+import gspread
+from google.oauth2.service_account import Credentials
+import os
 from datetime import datetime
-from geopy.geocoders import Nominatim
-import qrcode
-import gspread
-from google.oauth2.service_account import Credentials
-import os
-import json
-import gspread
-from google.oauth2.service_account import Credentials
-import os
 
-creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
+# ==================================
+# KONFIGURATION
+# ==================================
 
-scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+SPREADSHEET_ID = "1d_ZgrOqK1NT0U7qRm5aKsw5hSjO1fQqHgbK-DK9Y_fo"
 
-gc = gspread.authorize(creds)
-
-app = Flask(__name__)
-
-# =======================
-# Google Sheets Setup
-# =======================
 SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/spreadsheets"
 ]
 
-CREDS = Credentials.from_service_account_file(
-    "service_account.json",
+# ==================================
+# GOOGLE AUTH (NUR SECRET FILE!)
+# ==================================
+
+credentials = Credentials.from_service_account_file(
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"],
     scopes=SCOPES
 )
 
-gc = gspread.authorize(CREDS)
-
-SPREADSHEET_ID = "1d_ZgrOqK1NT0U7qRm5aKsw5hSjO1fQqHgbK-DK9Y_fo"
+gc = gspread.authorize(credentials)
 sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 
+# ==================================
+# FLASK APP
+# ==================================
 
+app = Flask(__name__)
 
-# =======================
-# Standort (Ort)
-# =======================
-geolocator = Nominatim(user_agent="anwesenheit_qr_app")
-
-def get_city(lat, lon):
-    try:
-        location = geolocator.reverse(
-            f"{lat}, {lon}",
-            language="de",
-            exactly_one=True
-        )
-        if not location:
-            return "Unbekannt"
-
-        addr = location.raw.get("address", {})
-        return (
-            addr.get("city")
-            or addr.get("town")
-            or addr.get("village")
-            or addr.get("municipality")
-            or "Unbekannt"
-        )
-    except Exception:
-        return "Unbekannt"
-
-
-# =======================
-# QR-Code
-# =======================
-QR_FILE = "qr.png"
-
-def create_qr(url):
-    img = qrcode.make(url)
-    img.save(QR_FILE)
-
-
-# =======================
-# Routes
-# =======================
 @app.route("/")
 def index():
-    url = request.host_url + "checkin"
-    create_qr(url)
+    return "QR Anwesenheitssystem läuft ✅"
 
-    return render_template_string("""
-    <!doctype html>
-    <html lang="de">
-    <head>
-        <meta charset="utf-8">
-        <title>Anwesenheit QR</title>
-    </head>
-    <body>
-        <h2>QR-Code scannen</h2>
-        <img src="/qr" width="300">
-        <p>{{ url }}</p>
-    </body>
-    </html>
-    """, url=url)
-
-
-@app.route("/qr")
-def qr():
-    return send_file(QR_FILE, mimetype="image/png")
-
-
-@app.route("/checkin", methods=["GET", "POST"])
+@app.route("/checkin", methods=["POST"])
 def checkin():
-    if request.method == "POST":
-        name = request.form.get("name")
-        lat = request.form.get("lat")
-        lon = request.form.get("lon")
+    data = request.get_json(force=True)
 
-        city = get_city(lat, lon)
-        time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    name = data.get("name")
+    ort = data.get("ort")
 
-        sheet.append_row([name, time, city])
+    if not name or not ort:
+        return jsonify({"error": "Name und Ort erforderlich"}), 400
 
-        return f"""
-        <h3>✅ Gespeichert</h3>
-        <p><b>Name:</b> {name}</p>
-        <p><b>Ort:</b> {city}</p>
-        """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    return render_template_string("""
-    <!doctype html>
-    <html lang="de">
-    <head>
-        <meta charset="utf-8">
-        <title>Check-in</title>
-    </head>
-    <body>
-        <h2>Anwesenheit eintragen</h2>
+    sheet.append_row([timestamp, name, ort])
 
-        <form method="POST">
-            <input name="name" placeholder="Name" required><br><br>
-            <input type="hidden" name="lat" id="lat">
-            <input type="hidden" name="lon" id="lon">
-            <button type="submit">Einchecken</button>
-        </form>
+    return jsonify({"status": "ok"})
 
-        <script>
-        navigator.geolocation.getCurrentPosition(
-            pos => {
-                document.getElementById("lat").value = pos.coords.latitude;
-                document.getElementById("lon").value = pos.coords.longitude;
-            },
-            err => alert("Standortfreigabe ist erforderlich!")
-        );
-        </script>
-    </body>
-    </html>
-    """)
+# ==================================
+# START (lokal)
+# ==================================
 
-
-# =======================
-# Local run (optional)
-# =======================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
