@@ -1,110 +1,91 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>QR Anwesenheit</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<title>QR Anwesenheit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #f4f6f8;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 420px;
-            margin: 40px auto;
-            background: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        input, button {
-            width: 100%;
-            padding: 14px;
-            margin-bottom: 14px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 16px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            font-weight: 600;
-        }
-        button:disabled {
-            background: #999;
-        }
-        .msg {
-            text-align: center;
-            margin-top: 15px;
-        }
-    </style>
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #f2f4f7;
+    margin: 0;
+}
+.box {
+    max-width: 420px;
+    margin: 40px auto;
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.1);
+}
+input, button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 16px;
+}
+button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+}
+#msg {
+    margin-top: 15px;
+    text-align: center;
+}
+</style>
 </head>
+
 <body>
-
-<div class="container">
-    <h1>📍 Anwesenheit</h1>
-
-    <input type="text" id="name" placeholder="Dein Name" required>
-
-    <button onclick="checkin()">Check-in</button>
-
-    <div class="msg" id="msg"></div>
+<div class="box">
+<h2>📍 Anwesenheit</h2>
+<input id="name" placeholder="Dein Name">
+<button onclick="checkin()">Check-in</button>
+<div id="msg"></div>
 </div>
 
 <script>
-    const TOKEN = "{{ token }}";
+const TOKEN = "{{ token }}";
 
-    function getDeviceId() {
-        let id = localStorage.getItem("device_id");
-        if (!id) {
-            id = crypto.randomUUID();
-            localStorage.setItem("device_id", id);
-        }
-        return id;
+function getDeviceId() {
+    let id = localStorage.getItem("device_id");
+    if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem("device_id", id);
+    }
+    return id;
+}
+
+function checkin() {
+    const name = document.getElementById("name").value.trim();
+    const msg = document.getElementById("msg");
+
+    if (!name) {
+        msg.innerText = "❌ Bitte Namen eingeben";
+        return;
     }
 
-    function checkin() {
-        const name = document.getElementById("name").value.trim();
-        const msg = document.getElementById("msg");
-
-        if (!name) {
-            msg.innerText = "❌ Bitte Namen eingeben";
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(pos => {
-            fetch("/checkin", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: name,
-                    token: TOKEN,
-                    device_id: getDeviceId(),
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude
-                })
+    navigator.geolocation.getCurrentPosition(pos => {
+        fetch("/checkin", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                name: name,
+                token: TOKEN,
+                device_id: getDeviceId(),
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude
             })
-            .then(r => r.json())
-            .then(data => {
-                msg.innerText = data.message;
-            })
-            .catch(() => {
-                msg.innerText = "❌ Fehler beim Check-in";
-            });
-
-        }, () => {
-            msg.innerText = "❌ Standortfreigabe nötig";
-        });
-    }
+        })
+        .then(r => r.json())
+        .then(d => msg.innerText = d.message)
+        .catch(() => msg.innerText = "❌ Fehler");
+    }, () => {
+        msg.innerText = "❌ Standort erlauben";
+    });
+}
 </script>
-
 </body>
 </html>
