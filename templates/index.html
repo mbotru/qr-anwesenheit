@@ -1,107 +1,69 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Anwesenheit Büro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Mobile-friendly reset -->
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                   Roboto, Helvetica, Arial, sans-serif;
-    }
-
     body {
-      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       background: #f4f6f8;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      margin: 0;
+      padding: 0;
     }
-
     .card {
-      background: #ffffff;
-      width: 100%;
       max-width: 420px;
-      padding: 24px;
-      border-radius: 14px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      margin: 40px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
-
     h1 {
       text-align: center;
-      margin-bottom: 20px;
-      font-size: 1.6rem;
+      font-size: 1.4rem;
     }
-
-    label {
-      font-weight: 600;
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    input {
+    input, button {
       width: 100%;
-      padding: 14px;
-      margin-bottom: 16px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
+      padding: 12px;
+      margin-top: 10px;
       font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
     }
-
     button {
-      width: 100%;
-      padding: 14px;
-      border-radius: 10px;
+      background: #0066ff;
+      color: white;
       border: none;
-      background: #2563eb;
-      color: #fff;
-      font-size: 1.1rem;
-      font-weight: 600;
-      cursor: pointer;
+      font-weight: bold;
     }
-
     button:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
+      background: #999;
     }
-
     .msg {
-      margin-top: 16px;
+      margin-top: 15px;
       text-align: center;
-      font-weight: 600;
-    }
-
-    .ok {
-      color: #16a34a;
-    }
-
-    .err {
-      color: #dc2626;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
-  <div class="card">
-    <h1>📋 Anwesenheit Büro</h1>
+<div class="card">
+  <h1>🏢 Anwesenheit Büro</h1>
 
-    <label for="name">Name</label>
-    <input id="name" type="text" placeholder="Dein Name" required />
+  <input id="name" placeholder="Dein Name">
 
-    <button id="btn">Check-in</button>
+  <button onclick="checkIn()">Check-in</button>
 
-    <div id="msg" class="msg"></div>
-  </div>
+  <div class="msg" id="msg"></div>
+</div>
 
 <script>
-/* -------------------------
-   Device-ID (stabil)
--------------------------- */
+const TOKEN = "{{ token }}";
+
+// stabiles Geräte-ID (bleibt im selben Browser gleich)
 function getDeviceId() {
   let id = localStorage.getItem("device_id");
   if (!id) {
@@ -111,62 +73,66 @@ function getDeviceId() {
   return id;
 }
 
-/* -------------------------
-   Stadt ermitteln
-   (Browser-sicher, kein GPS)
--------------------------- */
-function getCity() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Unbekannt";
+// GPS → Stadt
+async function getCity() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve("Unbekannt");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+        );
+        const data = await res.json();
+
+        resolve(
+          data.address.city ||
+          data.address.town ||
+          data.address.village ||
+          "Unbekannt"
+        );
+      } catch {
+        resolve("Unbekannt");
+      }
+    }, () => resolve("Unbekannt"));
+  });
 }
 
-/* -------------------------
-   Check-in
--------------------------- */
-const btn = document.getElementById("btn");
-const msg = document.getElementById("msg");
-
-btn.addEventListener("click", async () => {
-  msg.textContent = "";
-  msg.className = "msg";
-
+async function checkIn() {
   const name = document.getElementById("name").value.trim();
+  const msg = document.getElementById("msg");
+
   if (!name) {
-    msg.textContent = "❌ Bitte Namen eingeben";
-    msg.classList.add("err");
+    msg.innerText = "❗ Bitte Namen eingeben";
     return;
   }
 
-  btn.disabled = true;
+  msg.innerText = "📍 Standort wird ermittelt…";
 
-  try {
-    const res = await fetch("/checkin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: name,
-        device_id: getDeviceId(),
-        token: "{{ token }}",
-        city: getCity()
-      })
-    });
+  const city = await getCity();
 
-    const data = await res.json();
+  const payload = {
+    name: name,
+    device_id: getDeviceId(),
+    token: TOKEN,
+    city: city
+  };
 
-    if (res.ok) {
-      msg.textContent = data.message;
-      msg.classList.add("ok");
-    } else {
-      msg.textContent = data.error || data.message || "❌ Fehler";
-      msg.classList.add("err");
-    }
-  } catch (e) {
-    msg.textContent = "❌ Netzwerkfehler";
-    msg.classList.add("err");
-  }
+  const res = await fetch("/checkin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
 
-  btn.disabled = false;
-});
+  const data = await res.json();
+  msg.innerText = data.message || data.error;
+}
 </script>
-
 </body>
 </html>
