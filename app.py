@@ -7,7 +7,7 @@ import requests
 
 # ================== CONFIG ==================
 VALID_TOKEN = "QR2025-ZUTRITT"
-SPREADSHEET_ID = "HIER_DEINE_SHEET_ID"
+SPREADSHEET_ID = "1d_ZgrOqK1NT0U7qRm5aKsw5hSjO1fQqHgbK-DK9Y_fo"
 PORT = int(os.environ.get("PORT", 10000))
 
 # ================== GOOGLE AUTH ==================
