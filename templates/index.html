@@ -142,14 +142,20 @@ function checkin() {
                     longitude: position.coords.longitude
                 })
             })
-            .then(r => r.json())
-            .then(data => {
-                if (data.message && data.message.startsWith("✅")) {
-                    showMessage(data.message, "success");
-                } else {
-                    showMessage(data.message || "❌ Fehler", "error");
-                }
-            })
+          .then(r => r.json())
+.then(data => {
+    if (!data || !data.message) {
+        showMessage("❌ Check-in fehlgeschlagen (keine Serverantwort)", "error");
+        return;
+    }
+
+    if (data.message.includes("erfolgreich")) {
+        showMessage(data.message, "success");
+    } else {
+        showMessage(data.message, "error");
+    }
+})
+
             .catch(() => {
                 showMessage("❌ Netzwerkfehler", "error");
             });
