@@ -170,9 +170,3 @@ def checkin():
     sheet.append_row([today, name, ort, device_id])
     return jsonify({"status": "ok"})
 
-# =================================================
-# START
-# =================================================
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
