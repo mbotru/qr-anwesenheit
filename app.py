@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template_string, abort
 import gspread
 from google.oauth2.service_account import Credentials
 import os
-from datetime import datetime, date
+from datetime import date
 
 # =================================================
 # KONFIGURATION
@@ -55,7 +55,7 @@ button { background:#2e7d32; color:#fff; border:none; border-radius:12px; }
 <form id="form">
 <input id="name" placeholder="Name" required>
 <input id="ort" readonly placeholder="Ort wird ermittelt..." required>
-<button>Einchecken</button>
+<button type="submit">Einchecken</button>
 </form>
 
 <div id="status"></div>
@@ -64,40 +64,68 @@ button { background:#2e7d32; color:#fff; border:none; border-radius:12px; }
 <script>
 const TOKEN = "{{ token }}";
 
-// ---------- Device ID ----------
-let deviceId = localStorage.getItem("device_id");
-if (!deviceId) {
-    deviceId = crypto.randomUUID();
-    localStorage.setItem("device_id", deviceId);
+// =================================================
+// DEVICE ID – GARANTIERT
+// =================================================
+function getDeviceId() {
+    let id = localStorage.getItem("device_id");
+    if (!id) {
+        try {
+            id = crypto.randomUUID();
+        } catch {
+            id = "dev-" + Date.now() + "-" + Math.random().toString(36).substring(2);
+        }
+        localStorage.setItem("device_id", id);
+    }
+    return id;
 }
 
-// ---------- Standort ----------
-navigator.geolocation.getCurrentPosition(async pos => {
-    const r = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
-    );
-    const d = await r.json();
-    document.getElementById("ort").value =
-        (d.address.city || d.address.town || d.address.village || "Unbekannt")
-        + ", " + (d.address.country || "");
-}, () => {
-    document.getElementById("ort").value = "Standort blockiert";
-});
+const DEVICE_ID = getDeviceId();
 
-// ---------- Submit ----------
+// =================================================
+// ORT – MIT FALLBACK (IMMER GEFÜLLT)
+// =================================================
+function setOrt(text) {
+    document.getElementById("ort").value = text;
+}
+
+navigator.geolocation.getCurrentPosition(
+    async pos => {
+        try {
+            const r = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
+            );
+            const d = await r.json();
+            setOrt(
+                (d.address.city || d.address.town || d.address.village || "Unbekannt")
+                + ", " + (d.address.country || "")
+            );
+        } catch {
+            setOrt("Ort unbekannt");
+        }
+    },
+    () => setOrt("Ort unbekannt"),
+    { timeout: 8000 }
+);
+
+// =================================================
+// SUBMIT
+// =================================================
 document.getElementById("form").addEventListener("submit", async e => {
     e.preventDefault();
     const status = document.getElementById("status");
 
+    const payload = {
+        token: TOKEN,
+        name: name.value.trim(),
+        ort: ort.value.trim(),
+        device_id: DEVICE_ID
+    };
+
     const res = await fetch("/checkin", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-            token: TOKEN,
-            name: name.value,
-            ort: ort.value,
-            device_id: deviceId
-        })
+        body: JSON.stringify(payload)
     });
 
     const data = await res.json();
@@ -120,19 +148,21 @@ def index():
 
 @app.route("/checkin", methods=["POST"])
 def checkin():
-    data = request.get_json()
-    today = date.today().isoformat()
+    data = request.get_json(silent=True) or {}
 
     name = data.get("name")
     ort = data.get("ort")
-    device_id = data.get("device_id")
+    device_id = data.get("device_id") or "unknown-device"
+    today = date.today().isoformat()
 
-    if not name or not ort or not device_id:
+    if not name or not ort:
         return jsonify({"error": "Unvollständige Daten"}), 400
 
-    rows = sheet.get_all_values()[1:]  # ohne Header
+    rows = sheet.get_all_values()[1:]
 
     for row in rows:
+        if len(row) < 4:
+            continue
         row_date, row_name, _, row_device = row
         if row_date == today and row_name == name and row_device == device_id:
             return jsonify({"error": "Heute bereits eingecheckt"}), 400
