@@ -1,18 +1,30 @@
+import os
+import json
+import hashlib
+from datetime import datetime, date
+
 from flask import Flask, request, jsonify, render_template
-import os, json
-from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
-import requests
 
-# ================== CONFIG ==================
+# -----------------------
+# Flask App
+# -----------------------
+app = Flask(__name__)
+
+# -----------------------
+# Konfiguration
+# -----------------------
 VALID_TOKEN = "QR2025-ZUTRITT"
-SPREADSHEET_ID = "1d_ZgrOqK1NT0U7qRm5aKsw5hSjO1fQqHgbK-DK9Y_fo"
-PORT = int(os.environ.get("PORT", 10000))
+SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID")
 
-# ================== GOOGLE AUTH ==================
+# -----------------------
+# Google Credentials laden
+# -----------------------
 if "GOOGLE_CREDENTIALS_JSON" not in os.environ:
-    raise RuntimeError("GOOGLE_CREDENTIALS_JSON fehlt. Bitte in Render setzen.")
+    raise RuntimeError(
+        "GOOGLE_CREDENTIALS_JSON fehlt. Bitte in Render → Environment → Secrets setzen."
+    )
 
 try:
     creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
@@ -21,84 +33,91 @@ except json.JSONDecodeError:
 
 scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
 ]
 
 creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
 gc = gspread.authorize(creds)
+
 sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 
-# ================== APP ==================
-app = Flask(__name__)
+# -----------------------
+# Hilfsfunktionen
+# -----------------------
+def hash_device(device_id: str) -> str:
+    return hashlib.sha256(device_id.encode()).hexdigest()
 
-# ================== HELPER: CITY ==================
-def get_city(lat, lon):
-    try:
-        url = "https://nominatim.openstreetmap.org/reverse"
-        params = {
-            "lat": lat,
-            "lon": lon,
-            "format": "json"
-        }
-        headers = {"User-Agent": "qr-anwesenheit-app"}
-        r = requests.get(url, params=params, headers=headers, timeout=10)
-        data = r.json()
 
-        address = data.get("address", {})
-        return (
-            address.get("city")
-            or address.get("town")
-            or address.get("village")
-            or "Unbekannt"
-        )
-    except Exception:
-        return "Unbekannt"
+def already_checked_in_today(device_hash: str) -> bool:
+    today = date.today().isoformat()
+    rows = sheet.get_all_records()
 
-# ================== ROUTES ==================
-@app.route("/")
+    for row in rows:
+        if (
+            row.get("device_hash") == device_hash
+            and str(row.get("date")) == today
+        ):
+            return True
+    return False
+
+
+# -----------------------
+# Routes
+# -----------------------
+@app.route("/", methods=["GET"])
 def index():
     token = request.args.get("token")
     if token != VALID_TOKEN:
-        return "Zugriff verweigert", 403
+        return "❌ Ungültiger oder fehlender QR-Code", 403
+
     return render_template("index.html", token=token)
+
 
 @app.route("/checkin", methods=["POST"])
 def checkin():
-    data = request.get_json(silent=True)
+    data = request.get_json()
+
     if not data:
-        return jsonify({"message": "Ungültige Anfrage"}), 400
+        return jsonify({"error": "Keine Daten empfangen"}), 400
 
     name = data.get("name")
-    token = data.get("token")
     device_id = data.get("device_id")
-    lat = data.get("latitude")
-    lon = data.get("longitude")
+    token = data.get("token")
+    city = data.get("city", "Unbekannt")
 
-    if not all([name, token, device_id, lat, lon]):
-        return jsonify({"message": "Unvollständige Daten"}), 400
+    if not name or not device_id or not token:
+        return jsonify({"error": "Unvollständige Daten"}), 400
 
     if token != VALID_TOKEN:
-        return jsonify({"message": "Ungültiger QR-Code"}), 403
+        return jsonify({"error": "Ungültiger QR-Code"}), 403
 
-    city = get_city(lat, lon)
+    device_hash = hash_device(device_id)
+
+    if already_checked_in_today(device_hash):
+        return jsonify({
+            "status": "blocked",
+            "message": "⚠️ Heute bereits eingecheckt"
+        }), 409
 
     now = datetime.now()
+
     sheet.append_row([
         now.strftime("%Y-%m-%d"),
         now.strftime("%H:%M:%S"),
         name,
-        city,
-        device_id
+        device_hash,
+        city
     ])
 
-return jsonify({
-    "status": "ok",
-    "message": f"✅ Check-in erfolgreich – Ort: {city}"
-})
-return jsonify({
-    "status": "error",
-    "message": "❌ Unvollständige Daten"
-}), 400
-# ================== START ==================
+    return jsonify({
+        "status": "ok",
+        "message": f"✅ Check-in erfolgreich ({city})"
+    })
+
+
+# -----------------------
+# Render Port Binding
+# -----------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=PORT)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
