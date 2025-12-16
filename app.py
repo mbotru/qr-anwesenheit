@@ -91,8 +91,14 @@ def checkin():
         device_id
     ])
 
-    return jsonify({"message": f"✅ Check-in erfolgreich ({city})"})
-
+return jsonify({
+    "status": "ok",
+    "message": f"✅ Check-in erfolgreich – Ort: {city}"
+})
+return jsonify({
+    "status": "error",
+    "message": "❌ Unvollständige Daten"
+}), 400
 # ================== START ==================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
