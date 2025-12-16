@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template_string, abort
 import gspread
 from google.oauth2.service_account import Credentials
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 # =================================================
 # KONFIGURATION
@@ -14,7 +14,7 @@ SECRET_TOKEN = "QR2025-ZUTRITT"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # =================================================
-# GOOGLE AUTH (Render Secret File)
+# GOOGLE AUTH
 # =================================================
 
 credentials = Credentials.from_service_account_file(
@@ -26,7 +26,7 @@ gc = gspread.authorize(credentials)
 sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 
 # =================================================
-# FLASK APP
+# FLASK
 # =================================================
 
 app = Flask(__name__)
@@ -37,157 +37,73 @@ HTML_PAGE = """
 <head>
 <meta charset="UTF-8">
 <title>QR Anwesenheit</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-* { box-sizing: border-box; }
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 16px;
-}
-
-.container {
-    max-width: 420px;
-    margin: auto;
-    background: #ffffff;
-    padding: 24px;
-    border-radius: 14px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-
-h2 {
-    text-align: center;
-    margin-bottom: 24px;
-}
-
-input {
-    width: 100%;
-    padding: 14px;
-    margin-top: 14px;
-    font-size: 16px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-}
-
-input[readonly] {
-    background-color: #f0f0f0;
-}
-
-button {
-    width: 100%;
-    margin-top: 20px;
-    padding: 16px;
-    font-size: 18px;
-    border-radius: 12px;
-    border: none;
-    background-color: #2e7d32;
-    color: white;
-}
-
-button:active {
-    transform: scale(0.98);
-}
-
-#status {
-    text-align: center;
-    margin-top: 16px;
-    font-weight: 600;
-}
+body { font-family: Arial; background:#f4f6f8; padding:16px; }
+.container { max-width:420px; margin:auto; background:#fff; padding:24px;
+             border-radius:14px; box-shadow:0 10px 25px rgba(0,0,0,0.08); }
+input, button { width:100%; padding:14px; margin-top:14px; font-size:16px; }
+button { background:#2e7d32; color:#fff; border:none; border-radius:12px; }
+#status { margin-top:16px; text-align:center; font-weight:bold; }
 </style>
 </head>
-
 <body>
 
 <div class="container">
-    <h2>Anwesenheit erfassen</h2>
+<h2>Anwesenheit erfassen</h2>
 
-    <form id="checkinForm">
-        <input type="text" id="name" placeholder="Name" required>
-        <input type="text" id="ort" placeholder="Ort wird ermittelt..." readonly required>
-        <button type="submit">Einchecken</button>
-    </form>
+<form id="form">
+<input id="name" placeholder="Name" required>
+<input id="ort" readonly placeholder="Ort wird ermittelt..." required>
+<button>Einchecken</button>
+</form>
 
-    <div id="status"></div>
+<div id="status"></div>
 </div>
 
 <script>
 const TOKEN = "{{ token }}";
 
-async function ermittleOrt() {
-    const ortFeld = document.getElementById("ort");
-
-    if (!navigator.geolocation) {
-        ortFeld.value = "Geolocation nicht unterstützt";
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-        async pos => {
-            try {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
-                    { headers: { "User-Agent": "QR-Anwesenheit/1.0" } }
-                );
-
-                const data = await response.json();
-
-                const city =
-                    data.address.city ||
-                    data.address.town ||
-                    data.address.village ||
-                    data.address.hamlet ||
-                    "Unbekannter Ort";
-
-                const country = data.address.country || "";
-
-                ortFeld.value = city + ", " + country;
-            } catch {
-                ortFeld.value = "Ort konnte nicht ermittelt werden";
-            }
-        },
-        () => {
-            ortFeld.value = "Standort blockiert";
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-    );
+// ---------- Device ID ----------
+let deviceId = localStorage.getItem("device_id");
+if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem("device_id", deviceId);
 }
 
-ermittleOrt();
+// ---------- Standort ----------
+navigator.geolocation.getCurrentPosition(async pos => {
+    const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
+    );
+    const d = await r.json();
+    document.getElementById("ort").value =
+        (d.address.city || d.address.town || d.address.village || "Unbekannt")
+        + ", " + (d.address.country || "");
+}, () => {
+    document.getElementById("ort").value = "Standort blockiert";
+});
 
-document.getElementById("checkinForm").addEventListener("submit", async e => {
+// ---------- Submit ----------
+document.getElementById("form").addEventListener("submit", async e => {
     e.preventDefault();
-
     const status = document.getElementById("status");
 
-    const response = await fetch("/checkin", {
+    const res = await fetch("/checkin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
             token: TOKEN,
-            name: document.getElementById("name").value,
-            ort: document.getElementById("ort").value
+            name: name.value,
+            ort: ort.value,
+            device_id: deviceId
         })
     });
 
-    if (response.ok) {
-        status.innerText = "✔ Anwesenheit gespeichert";
-        status.style.color = "#2e7d32";
-        document.getElementById("checkinForm").reset();
-    } else {
-        const err = await response.json();
-        status.innerText = "❌ " + (err.error || "Fehler");
-        status.style.color = "#c62828";
-    }
+    const data = await res.json();
+    status.innerText = res.ok ? "✔ Erfolgreich eingecheckt" : "❌ " + data.error;
 });
 </script>
-
 </body>
 </html>
 """
@@ -198,33 +114,30 @@ document.getElementById("checkinForm").addEventListener("submit", async e => {
 
 @app.route("/")
 def index():
-    token = request.args.get("token")
-    if token != SECRET_TOKEN:
+    if request.args.get("token") != SECRET_TOKEN:
         abort(403)
-    return render_template_string(HTML_PAGE, token=token)
+    return render_template_string(HTML_PAGE, token=SECRET_TOKEN)
 
 @app.route("/checkin", methods=["POST"])
 def checkin():
-    data = request.get_json(silent=True)
-
-    if not data:
-        return jsonify({"error": "Keine Daten empfangen"}), 400
-
-    if data.get("token") != SECRET_TOKEN:
-        return jsonify({"error": "Ungültiger Token"}), 403
+    data = request.get_json()
+    today = date.today().isoformat()
 
     name = data.get("name")
     ort = data.get("ort")
+    device_id = data.get("device_id")
 
-    if not name or not ort:
-        return jsonify({"error": "Name oder Ort fehlt"}), 400
+    if not name or not ort or not device_id:
+        return jsonify({"error": "Unvollständige Daten"}), 400
 
-    sheet.append_row([
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        name,
-        ort
-    ])
+    rows = sheet.get_all_values()[1:]  # ohne Header
 
+    for row in rows:
+        row_date, row_name, _, row_device = row
+        if row_date == today and row_name == name and row_device == device_id:
+            return jsonify({"error": "Heute bereits eingecheckt"}), 400
+
+    sheet.append_row([today, name, ort, device_id])
     return jsonify({"status": "ok"})
 
 # =================================================
