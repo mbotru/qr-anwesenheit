@@ -14,7 +14,7 @@ app = Flask(__name__)
 # KONFIGURATION
 # ===============================
 VALID_TOKEN = "QR2025-ZUTRITT"
-SPREADSHEET_ID = "HIER_DEINE_SHEET_ID"  # <-- HIER ANPASSEN
+SPREADSHEET_ID = "1d_ZgrOqK1NT0U7qRm5aKsw5hSjO1fQqHgbK-DK9Y_fo"  # <-- HIER ANPASSEN
 
 # ===============================
 # GOOGLE CREDENTIALS LADEN
