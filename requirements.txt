@@ -1,7 +1,5 @@
-flask
+Flask
 gunicorn
-geopy
-qrcode
-pillow
 gspread
 google-auth
+requests
