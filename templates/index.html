@@ -1,170 +1,171 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <title>Anwesenheit Büro</title>
 
-<title>Anwesenheit Büro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<!-- Mobile & Browser-kompatibel -->
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <!-- Mobile-friendly reset -->
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   Roboto, Helvetica, Arial, sans-serif;
+    }
 
-<style>
-/* Reset & Basics */
-* {
-    box-sizing: border-box;
-}
+    body {
+      margin: 0;
+      background: #f4f6f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-body {
-    margin: 0;
-    min-height: 100vh;
-    background: #f3f4f6;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                 Roboto, Helvetica, Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      border-radius: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
 
-/* Card */
-.container {
-    width: 100%;
-    max-width: 420px;
-    background: #ffffff;
-    padding: 24px;
-    margin: 16px;
-    border-radius: 14px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.1);
-}
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.6rem;
+    }
 
-h1 {
-    margin-top: 0;
-    text-align: center;
-    font-size: 1.6rem;
-}
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
 
-/* Form */
-input {
-    width: 100%;
-    padding: 14px;
-    font-size: 16px; /* wichtig für iOS Zoom */
-    border-radius: 10px;
-    border: 1px solid #d1d5db;
-    margin-bottom: 14px;
-}
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
 
-button {
-    width: 100%;
-    padding: 14px;
-    font-size: 16px;
-    border-radius: 10px;
-    border: none;
-    background: #2563eb;
-    color: #ffffff;
-    font-weight: 600;
-    cursor: pointer;
-}
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
 
-button:active {
-    opacity: 0.9;
-}
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
 
-#msg {
-    margin-top: 16px;
-    text-align: center;
-    font-size: 0.95rem;
-}
+    .msg {
+      margin-top: 16px;
+      text-align: center;
+      font-weight: 600;
+    }
 
-/* Success / Error Farben */
-.success { color: #16a34a; }
-.error { color: #dc2626; }
-</style>
+    .ok {
+      color: #16a34a;
+    }
+
+    .err {
+      color: #dc2626;
+    }
+  </style>
 </head>
 
 <body>
+  <div class="card">
+    <h1>📋 Anwesenheit Büro</h1>
 
-<div class="container">
-    <h1>📍 Anwesenheit Büro</h1>
+    <label for="name">Name</label>
+    <input id="name" type="text" placeholder="Dein Name" required />
 
-    <input
-        id="name"
-        type="text"
-        placeholder="Name eingeben"
-        autocomplete="name"
-    >
+    <button id="btn">Check-in</button>
 
-    <button onclick="checkin()">Check-in</button>
-
-    <div id="msg"></div>
-</div>
+    <div id="msg" class="msg"></div>
+  </div>
 
 <script>
-const TOKEN = "{{ token }}";
-
-/* Safari-kompatible Device-ID */
+/* -------------------------
+   Device-ID (stabil)
+-------------------------- */
 function getDeviceId() {
-    let id = localStorage.getItem("device_id");
-    if (!id) {
-        id = "dev-" + Date.now() + "-" + Math.random().toString(36).substring(2);
-        localStorage.setItem("device_id", id);
-    }
-    return id;
+  let id = localStorage.getItem("device_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("device_id", id);
+  }
+  return id;
 }
 
-function showMessage(text, type) {
-    const msg = document.getElementById("msg");
-    msg.textContent = text;
-    msg.className = type;
+/* -------------------------
+   Stadt ermitteln
+   (Browser-sicher, kein GPS)
+-------------------------- */
+function getCity() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Unbekannt";
 }
 
-function checkin() {
-    const name = document.getElementById("name").value.trim();
+/* -------------------------
+   Check-in
+-------------------------- */
+const btn = document.getElementById("btn");
+const msg = document.getElementById("msg");
 
-    if (!name) {
-        showMessage("❌ Bitte Namen eingeben", "error");
-        return;
-    }
+btn.addEventListener("click", async () => {
+  msg.textContent = "";
+  msg.className = "msg";
 
-    if (!navigator.geolocation) {
-        showMessage("❌ Standort wird nicht unterstützt", "error");
-        return;
-    }
+  const name = document.getElementById("name").value.trim();
+  if (!name) {
+    msg.textContent = "❌ Bitte Namen eingeben";
+    msg.classList.add("err");
+    return;
+  }
 
-    navigator.geolocation.getCurrentPosition(
-        position => {
-            fetch("/checkin", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: name,
-                    token: TOKEN,
-                    device_id: getDeviceId(),
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude
-                })
-            })
-          .then(r => r.json())
-.then(data => {
-    if (!data || !data.message) {
-        showMessage("❌ Check-in fehlgeschlagen (keine Serverantwort)", "error");
-        return;
-    }
+  btn.disabled = true;
 
-    if (data.message.includes("erfolgreich")) {
-        showMessage(data.message, "success");
+  try {
+    const res = await fetch("/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name,
+        device_id: getDeviceId(),
+        token: "{{ token }}",
+        city: getCity()
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      msg.textContent = data.message;
+      msg.classList.add("ok");
     } else {
-        showMessage(data.message, "error");
+      msg.textContent = data.error || data.message || "❌ Fehler";
+      msg.classList.add("err");
     }
-})
+  } catch (e) {
+    msg.textContent = "❌ Netzwerkfehler";
+    msg.classList.add("err");
+  }
 
-            .catch(() => {
-                showMessage("❌ Netzwerkfehler", "error");
-            });
-        },
-        () => {
-            showMessage("❌ Standortfreigabe erforderlich", "error");
-        }
-    );
-}
+  btn.disabled = false;
+});
 </script>
 
 </body>
