@@ -16,15 +16,9 @@ QR_TOKEN = "QR2025-ZUTRITT"
 # GOOGLE CREDENTIALS
 # ---------------------------
 if "GOOGLE_CREDENTIALS_JSON" not in os.environ:
-    raise RuntimeError(
-        "GOOGLE_CREDENTIALS_JSON fehlt. "
-        "In Render → Environment → Secrets setzen."
-    )
+    raise RuntimeError("GOOGLE_CREDENTIALS_JSON fehlt")
 
-try:
-    creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
-except json.JSONDecodeError:
-    raise RuntimeError("GOOGLE_CREDENTIALS_JSON ist kein gültiges JSON")
+creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
 
 scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -33,8 +27,6 @@ scopes = [
 
 creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
 gc = gspread.authorize(creds)
-
-# ❗ HIER passiert dein Fehler wenn ID / Freigabe falsch
 sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 
 # ---------------------------
@@ -52,36 +44,27 @@ def checkin():
         return jsonify(error="Keine Daten"), 400
 
     name = data.get("name")
-    device_id = data.get("device_id")
+    nachholen = data.get("nachholen")
     token = data.get("token")
-    city = data.get("city", "Unbekannt")
 
-    if not name or not device_id or token != QR_TOKEN:
+    if not name or not nachholen or token != QR_TOKEN:
         return jsonify(error="Unvollständige Daten"), 400
 
     today = date.today().isoformat()
 
     rows = sheet.get_all_records()
     for r in rows:
-        if (
-            r.get("device_id") == device_id
-            and r.get("Datum") == today
-        ):
-            return jsonify(
-                message="⚠️ Heute bereits eingecheckt"
-            ), 200
+        if r.get("Name") == name and r.get("Datum") == today:
+            return jsonify(message="⚠️ Heute bereits eingecheckt"), 200
 
     sheet.append_row([
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         today,
         name,
-        device_id,
-        city
+        nachholen
     ])
 
-    return jsonify(
-        message="✅ Check-in erfolgreich"
-    ), 200
+    return jsonify(message="✅ Check-in erfolgreich"), 200
 
 # ---------------------------
 # START
