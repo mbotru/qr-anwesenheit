@@ -42,10 +42,7 @@ sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 # ---------------------------
 @app.route("/")
 def index():
-    token = request.args.get("token")
-    if token != QR_TOKEN:
-        return "Zugriff verweigert", 403
-    return render_template("index.html", token=token)
+    return render_template("index.html")
 
 @app.route("/checkin", methods=["POST"])
 def checkin():
