@@ -70,4 +70,29 @@ button{
   cursor:pointer;
 }
 button:active{
-  transform: scale
+  transform: scale(0.98);
+}
+.error{
+  color:#ff5252;
+  margin-top:0.5rem;
+  display:none;
+  font-size:0.9rem;
+  text-align:center;
+}
+@media (max-width: 360px){
+  .card{
+    padding:1.5rem;
+  }
+  input, .radio, button{
+    padding:0.8rem;
+    font-size:0.9rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1 style="text-align:center; font-size:1.5rem;">CHECK-IN<br>Anwesenheit Bürotag</h1>
+
+  <input id="vorname" placeholder="Vorname
