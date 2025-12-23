@@ -4,121 +4,86 @@
 <meta charset="UTF-8">
 <title>CHECK-IN – Anwesenheit Bürotag</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: Arial, sans-serif;
-  color: white;
+body{
+  margin:0;min-height:100vh;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  display:flex;justify-content:center;align-items:center;
+  font-family:Arial;color:white;
 }
-.card {
-  width: 100%;
-  max-width: 420px;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(12px);
-  border-radius: 20px;
-  padding: 30px;
+.card{
+  width:100%;max-width:420px;
+  background:rgba(255,255,255,0.1);
+  backdrop-filter:blur(12px);
+  border-radius:20px;padding:30px;
 }
-h1 {
-  text-align: center;
-  margin-bottom: 20px;
+input{
+  width:100%;padding:14px;margin-top:10px;
+  border-radius:12px;border:none;
+  background:rgba(255,255,255,0.2);color:white;
 }
-input {
-  width: 100%;
-  padding: 14px;
-  margin-top: 10px;
-  border-radius: 12px;
-  border: none;
-  background: rgba(255,255,255,0.2);
-  color: white;
+.radio-group{display:flex;gap:10px;margin-top:15px;}
+.radio{
+  flex:1;padding:14px;text-align:center;
+  border-radius:12px;background:rgba(255,255,255,0.15);
+  cursor:pointer;
 }
-.radio-group {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
+.radio.active{background:rgba(0,229,255,0.4);}
+button{
+  width:100%;margin-top:20px;padding:16px;
+  border:none;border-radius:14px;
+  background:linear-gradient(135deg,#00e5ff,#00bcd4);
+  font-weight:bold;
 }
-.radio {
-  flex: 1;
-  padding: 14px;
-  text-align: center;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.15);
-  cursor: pointer;
-}
-.radio.active {
-  background: rgba(0,229,255,0.4);
-}
-button {
-  width: 100%;
-  margin-top: 20px;
-  padding: 16px;
-  border: none;
-  border-radius: 14px;
-  font-weight: bold;
-  background: linear-gradient(135deg,#00e5ff,#00bcd4);
-  cursor: pointer;
-}
-.error {
-  color: #ff5252;
-  margin-top: 10px;
-  display: none;
-}
+.error{color:#ff5252;margin-top:10px;display:none;}
 </style>
 </head>
 <body>
 
 <div class="card">
-  <h1>CHECK-IN<br>Anwesenheit Bürotag</h1>
+<h1>CHECK-IN<br>Anwesenheit Bürotag</h1>
 
-  <input id="vorname" placeholder="Vorname">
-  <input id="nachname" placeholder="Nachname">
+<input id="vorname" placeholder="Vorname">
+<input id="nachname" placeholder="Nachname">
 
-  <div class="radio-group">
-    <div class="radio" onclick="setNachholen('Ja')" id="ja">Ja</div>
-    <div class="radio" onclick="setNachholen('Nein')" id="nein">Nein</div>
-  </div>
+<div class="radio-group">
+  <div class="radio" id="ja" onclick="setNachholen('Ja')">Ja</div>
+  <div class="radio" id="nein" onclick="setNachholen('Nein')">Nein</div>
+</div>
 
-  <div class="error" id="error">Bitte alle Felder ausfüllen</div>
-
-  <button onclick="checkin()">Check-in bestätigen</button>
+<div class="error" id="error">Bitte alle Felder ausfüllen</div>
+<button onclick="checkin()">Check-in bestätigen</button>
 </div>
 
 <script>
-let nachholen = null;
+let nachholen=null;
 
-function setNachholen(v) {
-  nachholen = v;
-  document.getElementById("ja").classList.remove("active");
-  document.getElementById("nein").classList.remove("active");
+function setNachholen(v){
+  nachholen=v;
+  ja.classList.remove("active");
+  nein.classList.remove("active");
   document.getElementById(v.toLowerCase()).classList.add("active");
 }
 
-function checkin() {
-  const v = vorname.value.trim();
-  const n = nachname.value.trim();
-  if (!v || !n || !nachholen) {
-    error.style.display = "block";
+function checkin(){
+  if(!vorname.value||!nachname.value||!nachholen){
+    error.style.display="block";
     return;
   }
-  error.style.display = "none";
+  error.style.display="none";
 
-  fetch("/checkin", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      vorname: v,
-      nachname: n,
-      nachholen: nachholen,
-      token: "QR2025-ZUTRITT"
+  fetch("/checkin",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      vorname:vorname.value.trim(),
+      nachname:nachname.value.trim(),
+      nachholen:nachholen,
+      token:"QR2025-ZUTRITT"
     })
   })
   .then(r=>r.json())
-  .then(d=>alert(d.message || d.error));
+  .then(d=>alert(d.message||d.error));
 }
 </script>
 
