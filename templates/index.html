@@ -95,4 +95,83 @@ button:active{
 <div class="card">
   <h1 style="text-align:center; font-size:1.5rem;">CHECK-IN<br>Anwesenheit Bürotag</h1>
 
-  <input id="vorname" placeholder="Vorname
+  <!-- Vorname und Nachname -->
+  <input id="vorname" placeholder="Vorname" autocomplete="given-name">
+  <input id="nachname" placeholder="Nachname" autocomplete="family-name">
+
+  <!-- Nachholen -->
+  <div class="radio-group">
+    <div class="radio" id="ja">Ja</div>
+    <div class="radio" id="nein">Nein</div>
+  </div>
+
+  <div class="error" id="error">Bitte alle Felder ausfüllen</div>
+  <button id="checkinBtn">Check-in bestätigen</button>
+</div>
+
+<script>
+let nachholen = null;
+
+// Elemente speichern
+const jaEl = document.getElementById('ja');
+const neinEl = document.getElementById('nein');
+const vornameEl = document.getElementById('vorname');
+const nachnameEl = document.getElementById('nachname');
+const errorEl = document.getElementById('error');
+const checkinBtn = document.getElementById('checkinBtn');
+
+// Radio-Buttons Klick
+jaEl.addEventListener('click', () => setNachholen('Ja'));
+neinEl.addEventListener('click', () => setNachholen('Nein'));
+
+function setNachholen(v){
+  nachholen = v;
+  jaEl.classList.remove("active");
+  neinEl.classList.remove("active");
+  document.getElementById(v.toLowerCase()).classList.add("active");
+}
+
+// Check-in Button
+checkinBtn.addEventListener('click', () => {
+  const vorname = vornameEl.value.trim();
+  const nachname = nachnameEl.value.trim();
+
+  if(!vorname || !nachname || !nachholen){
+    errorEl.style.display="block";
+    return;
+  }
+  errorEl.style.display="none";
+
+  const payload = {
+    vorname: vorname,
+    nachname: nachname,
+    nachholen: nachholen,
+    token: "QR2025-ZUTRITT"
+  };
+
+  // Debug: prüfen ob alle Daten korrekt gesendet werden
+  console.log("Payload:", payload);
+
+  fetch("/checkin",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(d => {
+    alert(d.message || d.error);
+    if(d.message) {
+      // Felder zurücksetzen
+      vornameEl.value = "";
+      nachnameEl.value = "";
+      nachholen = null;
+      jaEl.classList.remove("active");
+      neinEl.classList.remove("active");
+    }
+  })
+  .catch(err => alert("Fehler beim Check-in: " + err));
+});
+</script>
+
+</body>
+</html>
