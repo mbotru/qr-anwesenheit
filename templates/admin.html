@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+  background:#0f2027;
+  color:white;
+  font-family:Arial;
+  padding:20px;
+}
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+th,td {
+  padding:10px;
+}
+tr:nth-child(even) {
+  background:rgba(255,255,255,0.05);
+}
+.today {
+  background:rgba(0,229,255,0.25);
+}
+</style>
+</head>
+<body>
+
+<h1>📊 Admin Dashboard</h1>
+
+<table>
+<tr>
+  <th>Datum</th>
+  <th>Vorname</th>
+  <th>Nachname</th>
+  <th>Nachholen</th>
+</tr>
+
+{% for r in rows %}
+<tr class="{% if r.Datum == today %}today{% endif %}">
+  <td>{{ r.Datum }}</td>
+  <td>{{ r.Vorname }}</td>
+  <td>{{ r.Nachname }}</td>
+  <td>{{ r.Nachholen }}</td>
+</tr>
+{% endfor %}
+</table>
+
+</body>
+</html>
 
