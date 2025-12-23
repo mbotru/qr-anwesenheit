@@ -11,7 +11,6 @@ app = Flask(__name__)
 # ---------------------------
 SPREADSHEET_ID = "1d_ZgrOqK1NT0U7qRm5aKsw5hSjO1fQqHgbK-DK9Y_fo"
 QR_TOKEN = os.environ.get("QR_TOKEN", "QR2025-ZUTRITT")
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "ADMIN-2025")
 
 # ---------------------------
 # GOOGLE CREDENTIALS
@@ -41,6 +40,9 @@ def index():
 def checkin():
     data = request.get_json()
 
+    if not data:
+        return jsonify(error="Keine Daten"), 400
+
     vorname = data.get("vorname")
     nachname = data.get("nachname")
     nachholen = data.get("nachholen")
@@ -69,17 +71,6 @@ def checkin():
     ])
 
     return jsonify(message="✅ Check-in erfolgreich"), 200
-
-@app.route("/admin")
-def admin():
-    token = request.args.get("token")
-    if token != ADMIN_TOKEN:
-        return "⛔ Zugriff verweigert", 403
-
-    rows = sheet.get_all_records()
-    today = date.today().isoformat()
-
-    return render_template("admin.html", rows=rows, today=today)
 
 # ---------------------------
 # START
