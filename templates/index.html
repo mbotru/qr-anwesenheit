@@ -5,87 +5,69 @@
 <title>CHECK-IN – Anwesenheit Bürotag</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 body{
-  margin:0;min-height:100vh;
+  min-height:100vh;
   background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  display:flex;justify-content:center;align-items:center;
-  font-family:Arial;color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:Arial, sans-serif;
+  color:white;
+  padding: 10px;
 }
 .card{
-  width:100%;max-width:420px;
+  width:90%;
+  max-width:420px;
   background:rgba(255,255,255,0.1);
   backdrop-filter:blur(12px);
-  border-radius:20px;padding:30px;
+  border-radius:20px;
+  padding:2rem;
+  display:flex;
+  flex-direction:column;
+  gap:1rem;
 }
 input{
-  width:100%;padding:14px;margin-top:10px;
-  border-radius:12px;border:none;
-  background:rgba(255,255,255,0.2);color:white;
+  width:100%;
+  padding:1rem;
+  border-radius:12px;
+  border:none;
+  background:rgba(255,255,255,0.2);
+  color:white;
+  font-size:1rem;
 }
-.radio-group{display:flex;gap:10px;margin-top:15px;}
+.radio-group{
+  display:flex;
+  gap:10px;
+  margin-top:0.5rem;
+}
 .radio{
-  flex:1;padding:14px;text-align:center;
-  border-radius:12px;background:rgba(255,255,255,0.15);
+  flex:1;
+  padding:1rem;
+  text-align:center;
+  border-radius:12px;
+  background:rgba(255,255,255,0.15);
   cursor:pointer;
+  font-size:1rem;
+  user-select: none;
+  transition: background 0.2s;
 }
-.radio.active{background:rgba(0,229,255,0.4);}
+.radio.active{
+  background:rgba(0,229,255,0.4);
+}
 button{
-  width:100%;margin-top:20px;padding:16px;
-  border:none;border-radius:14px;
+  width:100%;
+  padding:1.2rem;
+  border:none;
+  border-radius:14px;
   background:linear-gradient(135deg,#00e5ff,#00bcd4);
   font-weight:bold;
+  font-size:1rem;
+  cursor:pointer;
 }
-.error{color:#ff5252;margin-top:10px;display:none;}
-</style>
-</head>
-<body>
-
-<div class="card">
-<h1>CHECK-IN<br>Anwesenheit Bürotag</h1>
-
-<input id="vorname" placeholder="Vorname">
-<input id="nachname" placeholder="Nachname">
-
-<div class="radio-group">
-  <div class="radio" id="ja" onclick="setNachholen('Ja')">Ja</div>
-  <div class="radio" id="nein" onclick="setNachholen('Nein')">Nein</div>
-</div>
-
-<div class="error" id="error">Bitte alle Felder ausfüllen</div>
-<button onclick="checkin()">Check-in bestätigen</button>
-</div>
-
-<script>
-let nachholen=null;
-
-function setNachholen(v){
-  nachholen=v;
-  ja.classList.remove("active");
-  nein.classList.remove("active");
-  document.getElementById(v.toLowerCase()).classList.add("active");
-}
-
-function checkin(){
-  if(!vorname.value||!nachname.value||!nachholen){
-    error.style.display="block";
-    return;
-  }
-  error.style.display="none";
-
-  fetch("/checkin",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      vorname:vorname.value.trim(),
-      nachname:nachname.value.trim(),
-      nachholen:nachholen,
-      token:"QR2025-ZUTRITT"
-    })
-  })
-  .then(r=>r.json())
-  .then(d=>alert(d.message||d.error));
-}
-</script>
-
-</body>
-</html>
+button:active{
+  transform: scale
