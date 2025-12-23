@@ -2,68 +2,189 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Check-In</title>
+  <title>CHECK-IN – Anwesenheit Bürotag</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
+    :root {
+      --bg: #0f2027;
+      --card: rgba(255,255,255,0.08);
+      --accent: #00e5ff;
+      --text: #ffffff;
+      --error: #ff5252;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Roboto, sans-serif;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      color: var(--text);
+      padding: 20px;
     }
-    .box {
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
+
+    .card {
       width: 100%;
-      max-width: 350px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 420px;
+      background: var(--card);
+      backdrop-filter: blur(14px);
+      border-radius: 18px;
+      padding: 30px 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
     }
-    input, select, button {
+
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 25px;
+      letter-spacing: 1px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-top: 15px;
+      display: block;
+    }
+
+    input[type="text"] {
       width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 16px;
-    }
-    button {
-      background: #2e7d32;
-      color: white;
+      padding: 14px;
+      margin-top: 6px;
+      border-radius: 12px;
       border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      outline: none;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      font-size: 1rem;
     }
+
+    input::placeholder {
+      color: rgba(255,255,255,0.6);
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .radio {
+      flex: 1;
+      padding: 14px;
+      text-align: center;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.12);
+      cursor: pointer;
+      transition: 0.2s;
+      border: 2px solid transparent;
+      user-select: none;
+    }
+
+    .radio input {
+      display: none;
+    }
+
+    .radio.active {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.2);
+    }
+
+    .error {
+      color: var(--error);
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 25px;
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #00e5ff, #00bcd4);
+      color: #00343a;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
     button:hover {
-      background: #1b5e20;
+      transform: scale(1.02);
+      box-shadow: 0 10px 20px rgba(0,229,255,0.3);
+    }
+
+    @media (max-width: 380px) {
+      h1 {
+        font-size: 1.2rem;
+      }
     }
   </style>
 </head>
 <body>
 
-<div class="box">
-  <h2>Check-In</h2>
+<div class="card">
+  <h1>CHECK-IN<br>Anwesenheit Bürotag</h1>
 
-  <input type="text" id="vorname" placeholder="Vorname" required>
-  <input type="text" id="nachname" placeholder="Nachname" required>
+  <label>Vorname</label>
+  <input type="text" id="vorname" placeholder="Vorname">
 
-  <select id="nachholen">
-    <option value="Nein">Nicht nachholen</option>
-    <option value="Ja">Nachholen</option>
-  </select>
+  <label>Nachname</label>
+  <input type="text" id="nachname" placeholder="Nachname">
 
-  <button onclick="checkin()">Check-in</button>
+  <label>Bürotag nachholen?</label>
+  <div class="radio-group">
+    <div class="radio" onclick="selectNachholen('Ja')" id="radio-ja">
+      <input type="radio" name="nachholen" value="Ja"> Ja
+    </div>
+    <div class="radio" onclick="selectNachholen('Nein')" id="radio-nein">
+      <input type="radio" name="nachholen" value="Nein"> Nein
+    </div>
+  </div>
+
+  <div class="error" id="error">Bitte alle Felder ausfüllen</div>
+
+  <button onclick="checkin()">Check-in bestätigen</button>
 </div>
 
 <script>
+let nachholenValue = null;
+
+function selectNachholen(value) {
+  nachholenValue = value;
+  document.getElementById("radio-ja").classList.remove("active");
+  document.getElementById("radio-nein").classList.remove("active");
+  document.getElementById("radio-" + value.toLowerCase()).classList.add("active");
+}
+
 function checkin() {
+  const vorname = document.getElementById("vorname").value.trim();
+  const nachname = document.getElementById("nachname").value.trim();
+  const error = document.getElementById("error");
+
+  if (!vorname || !nachname || !nachholenValue) {
+    error.style.display = "block";
+    return;
+  }
+
+  error.style.display = "none";
+
   fetch("/checkin", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      vorname: document.getElementById("vorname").value.trim(),
-      nachname: document.getElementById("nachname").value.trim(),
-      nachholen: document.getElementById("nachholen").value,
+      vorname: vorname,
+      nachname: nachname,
+      nachholen: nachholenValue,
       token: "QR2025-ZUTRITT"
     })
   })
