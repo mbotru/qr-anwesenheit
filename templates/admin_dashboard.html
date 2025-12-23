@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+<style>
+body { font-family:Arial; padding:2rem; background:#f0f0f0; }
+h1 { color:#333; }
+table { border-collapse:collapse; width:100%; margin-top:1rem; }
+table, th, td { border:1px solid #999; }
+th, td { padding:0.5rem; text-align:left; }
+a.button { display:inline-block; margin:0.5rem 0; padding:0.5rem 1rem; background:#00bcd4; color:white; text-decoration:none; border-radius:6px; }
+</style>
+</head>
+<body>
+<h1>Admin Dashboard</h1>
+
+<a href="{{ url_for('admin_export') }}" class="button">Excel Export</a>
+<a href="{{ url_for('admin_logout') }}" class="button" style="background:#ff5252;">Logout</a>
+
+<h2>Statistik: Check-Ins pro Tag</h2>
+<ul>
+  {% for date, count in stats.items() %}
+    <li>{{ date }}: {{ count }} Check-Ins</li>
+  {% endfor %}
+</ul>
+
+<h2>Alle Check-Ins</h2>
+<table>
+<tr>
+  {% for key in records[0].keys() %}
+    <th>{{ key }}</th>
+  {% endfor %}
+</tr>
+{% for row in records %}
+<tr>
+  {% for value in row.values() %}
+    <td>{{ value }}</td>
+  {% endfor %}
+</tr>
+{% endfor %}
+</table>
+
+</body>
+</html>
