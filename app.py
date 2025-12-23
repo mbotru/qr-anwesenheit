@@ -10,7 +10,7 @@ app = Flask(__name__)
 # CONFIG
 # ---------------------------
 SPREADSHEET_ID = "1d_ZgrOqK1NT0U7qRm5aKsw5hSjO1fQqHgbK-DK9Y_fo"
-QR_TOKEN = "QR2025-ZUTRITT"
+QR_TOKEN = os.environ.get("QR_TOKEN", "QR2025-ZUTRITT")
 
 # ---------------------------
 # GOOGLE CREDENTIALS
@@ -43,24 +43,30 @@ def checkin():
     if not data:
         return jsonify(error="Keine Daten"), 400
 
-    name = data.get("name")
+    vorname = data.get("vorname")
+    nachname = data.get("nachname")
     nachholen = data.get("nachholen")
     token = data.get("token")
 
-    if not name or not nachholen or token != QR_TOKEN:
-        return jsonify(error="Unvollständige Daten"), 400
+    if not vorname or not nachname or nachholen is None or token != QR_TOKEN:
+        return jsonify(error="Unvollständige oder ungültige Daten"), 400
 
     today = date.today().isoformat()
 
     rows = sheet.get_all_records()
     for r in rows:
-        if r.get("Name") == name and r.get("Datum") == today:
+        if (
+            r.get("Vorname") == vorname
+            and r.get("Nachname") == nachname
+            and r.get("Datum") == today
+        ):
             return jsonify(message="⚠️ Heute bereits eingecheckt"), 200
 
     sheet.append_row([
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         today,
-        name,
+        vorname,
+        nachname,
         nachholen
     ])
 
