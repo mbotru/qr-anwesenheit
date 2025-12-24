@@ -5,72 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard</title>
 <style>
-body {
-    font-family: 'Roboto', sans-serif;
-    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-    color:#fff;
-    margin:0; padding:2rem;
-}
-
-h2 { color:#00f0ff; }
-
-table {
-    width:100%; 
-    border-collapse:collapse; 
-    margin-top:20px;
-    font-size:0.95rem;
-}
-
-th, td { 
-    border:1px solid #00f0ff; 
-    padding:8px; 
-    text-align:left; 
-}
-
-th { background:#111; }
-
-a.button {
-    display:inline-block;
-    margin-top:10px;
-    padding:10px 15px;
-    background:#00f0ff;
-    color:#000;
-    text-decoration:none;
-    border-radius:8px;
-    transition: all 0.3s ease;
-}
-
-a.button:hover {
-    background:#00c8cc;
-}
-
-@media(max-width:480px){
-    body { padding:1rem;}
-    table { font-size:0.85rem;}
-    a.button { padding:8px 12px;}
-}
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', sans-serif;
+        background: #0a0a0a;
+        color: #f0f0f0;
+    }
+    header {
+        background: #111;
+        padding: 15px;
+        text-align: center;
+        color: #00ffcc;
+        font-size: 24px;
+    }
+    .container {
+        padding: 20px;
+        max-width: 1000px;
+        margin: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        padding: 12px;
+        border: 1px solid #222;
+        text-align: center;
+    }
+    th {
+        background: #222;
+        color: #00ffcc;
+    }
+    tr:nth-child(even) {
+        background: #111;
+    }
+    a.button {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #00ffcc;
+        color: #000;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        transition: 0.3s;
+    }
+    a.button:hover {
+        background: #00d9b3;
+    }
 </style>
 </head>
 <body>
-<h2>Admin Dashboard</h2>
-<a class="button" href="{{ url_for('export_csv') }}">CSV Export</a>
-<table>
-<tr>
-    <th>Vorname</th>
-    <th>Nachname</th>
-    <th>Bürotag nachholen</th>
-    <th>Datum</th>
-    <th>Uhrzeit</th>
-</tr>
-{% for r in records %}
-<tr>
-    <td>{{ r['Vorname'] }}</td>
-    <td>{{ r['Nachname'] }}</td>
-    <td>{{ r['Bürotag nachholen'] }}</td>
-    <td>{{ r['Datum'] }}</td>
-    <td>{{ r['Uhrzeit'] }}</td>
-</tr>
-{% endfor %}
-</table>
+<header>Admin Dashboard</header>
+<div class="container">
+    <a href="{{ url_for('export_csv') }}" class="button">CSV Export</a>
+    <a href="{{ url_for('logout') }}" class="button">Logout</a>
+    <table>
+        <tr>
+            <th>Vorname</th>
+            <th>Nachname</th>
+            <th>Bürotag nachholen</th>
+            <th>Datum</th>
+        </tr>
+        {% for c in checkins %}
+        <tr>
+            <td>{{ c['Vorname'] }}</td>
+            <td>{{ c['Nachname'] }}</td>
+            <td>{{ c['Bürotag nachholen'] }}</td>
+            <td>{{ c['Datum'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
 </body>
 </html>
