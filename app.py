@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 import os, json, csv
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
-from io import BytesIO, TextIOWrapper
+from io import BytesIO
 
 # ---------------------------
 # APP INIT
@@ -135,26 +135,26 @@ def admin_export_csv_by_date(export_date):
 # CSV BUILDER
 # ---------------------------
 def _build_csv(records, filename):
-    buffer = BytesIO()
-    wrapper = TextIOWrapper(buffer, encoding="utf-8-sig", newline="", write_through=True)
+    output = BytesIO()
     
-    writer = csv.writer(wrapper, delimiter=";", quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(HEADERS)
-    
+    # CSV in Bytes schreiben, Render/Gunicorn kompatibel
+    lines = []
+    lines.append(";".join(HEADERS))
     for r in records:
-        writer.writerow([
+        lines.append(";".join([
             r.get("Zeitstempel", ""),
             r.get("Datum", ""),
             r.get("Vorname", ""),
             r.get("Nachname", ""),
             r.get("Nachholen", "")
-        ])
+        ]))
     
-    wrapper.flush()
-    buffer.seek(0)
-    
+    csv_data = "\r\n".join(lines).encode("utf-8-sig")
+    output.write(csv_data)
+    output.seek(0)
+
     return send_file(
-        buffer,
+        output,
         mimetype="text/csv; charset=utf-8",
         as_attachment=True,
         download_name=filename
