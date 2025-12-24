@@ -3,71 +3,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login</title>
+<title>Admin Dashboard</title>
 <style>
-    body {
+    /* Basis & Body */
+    * {
+        box-sizing: border-box;
         margin: 0;
+        padding: 0;
+    }
+    body, html {
         font-family: 'Segoe UI', sans-serif;
-        background: #0a0a0a;
-        color: #f0f0f0;
+        background: linear-gradient(135deg, #0a0a0a, #111111);
+        min-height: 100vh;
         display: flex;
         justify-content: center;
-        align-items: center;
-        min-height: 100vh;
+        padding: 30px 10px;
     }
+
+    /* Container */
     .container {
         background: #111;
         padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 0 20px #ff00ff44;
-        max-width: 350px;
-        width: 90%;
-    }
-    h1 {
-        text-align: center;
-        color: #ff00ff;
-    }
-    input[type="password"] {
+        border-radius: 16px;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        max-width: 800px;
         width: 100%;
-        padding: 10px;
-        margin: 8px 0;
+        color: #fff;
+    }
+
+    h1 {
+        color: #00ffff;
+        text-align: center;
+        margin-bottom: 25px;
+        font-size: 1.8rem;
+    }
+
+    /* Form */
+    form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    input[type="date"], input[type="submit"] {
+        padding: 10px 12px;
+        border-radius: 8px;
         border: none;
-        border-radius: 6px;
+        font-size: 16px;
+    }
+    input[type="date"] {
         background: #222;
         color: #fff;
     }
-    button {
-        width: 100%;
-        padding: 12px;
-        background: #ff00ff;
-        border: none;
-        border-radius: 8px;
-        color: #fff;
+    input[type="submit"] {
+        background: #00ffff;
+        color: #111;
         font-weight: bold;
         cursor: pointer;
-        font-size: 16px;
-        transition: 0.3s;
+        transition: background 0.3s;
     }
-    button:hover {
-        background: #cc00cc;
+    input[type="submit"]:hover {
+        background: #00cccc;
     }
-    .error {
-        color: #ff4444;
-        text-align: center;
-        margin-bottom: 10px;
+
+    /* Tabelle */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        text-align: left;
+    }
+    th, td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #222;
+    }
+    th {
+        background-color: #111;
+        color: #00ffff;
+        font-weight: bold;
+    }
+    td {
+        color: #fff;
+    }
+
+    /* Responsive Anpassung */
+    @media (max-width: 600px) {
+        form {
+            flex-direction: column;
+        }
+        table th, table td {
+            padding: 10px 5px;
+            font-size: 14px;
+        }
     }
 </style>
 </head>
 <body>
 <div class="container">
-    <h1>Admin Login</h1>
-    {% if error %}
-        <div class="error">{{ error }}</div>
-    {% endif %}
-    <form method="POST">
-        <input type="password" name="password" placeholder="Passwort" required>
-        <button type="submit">Login</button>
+    <h1>Admin Dashboard</h1>
+
+    <!-- Filter / Export -->
+    <form method="GET" action="/admin/export/csv">
+        <input type="date" name="date" required>
+        <input type="submit" value="CSV Export">
     </form>
+
+    <!-- Check-ins Tabelle -->
+    <table>
+        <thead>
+            <tr>
+                <th>Vorname</th>
+                <th>Nachname</th>
+                <th>Bürotag nachholen</th>
+                <th>Datum</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for entry in entries %}
+            <tr>
+                <td>{{ entry.vorname }}</td>
+                <td>{{ entry.nachname }}</td>
+                <td>{{ entry.buerotag_nachholen }}</td>
+                <td>{{ entry.date }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
 </body>
 </html>
