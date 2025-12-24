@@ -4,154 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QR CHECK-IN Bürotag</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
-    body {
-        font-family: 'Orbitron', sans-serif;
-        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-        color: #ffffff;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        min-height: 100vh;
-        padding: 20px;
-    }
-
-    h1 {
-        margin-top: 50px;
-        font-size: 2.5rem;
-        text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
-    }
-
-    form {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        max-width: 350px;
-        background: rgba(255,255,255,0.05);
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 0 30px rgba(0,255,255,0.3);
-        margin-top: 40px;
-    }
-
-    input[type="text"] {
-        padding: 12px;
-        margin: 10px 0;
-        border: none;
-        border-radius: 10px;
-        font-size: 1rem;
-        background: rgba(255,255,255,0.1);
-        color: #fff;
-    }
-
-    input::placeholder { color: rgba(255,255,255,0.7); }
-
-    .radio-group {
-        display: flex;
-        justify-content: space-between;
-        margin: 15px 0;
-        color: #fff;
-        flex-wrap: wrap;
-    }
-
-    .radio-group label {
-        margin-right: 5px;
-        font-weight: bold;
-    }
-
-    .radio-group input[type="radio"] {
-        margin-right: 5px;
-        cursor: pointer;
-    }
-
-    button {
-        padding: 12px;
-        margin-top: 15px;
-        border: none;
-        border-radius: 10px;
-        background: linear-gradient(90deg, #00ffff, #0077ff);
-        color: #000;
-        font-weight: bold;
-        font-size: 1.1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    button:hover {
-        background: linear-gradient(90deg, #0077ff, #00ffff);
-        transform: translateY(-3px);
-        box-shadow: 0 0 15px #00ffff;
-    }
-
-    .message {
-        margin-top: 20px;
-        font-size: 1.2rem;
-        font-weight: bold;
-        text-align: center;
-        color: #00ffea;
-    }
-
-    @media(max-width: 400px){
-        h1 { font-size: 2rem; }
-        form { padding: 20px; }
-        .radio-group { flex-direction: column; gap: 10px; }
-    }
+body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background:#0d0d0d; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;}
+.container { background:#1a1a1a; padding:2rem; border-radius:12px; max-width:400px; width:90%; box-shadow:0 0 20px rgba(0,255,255,0.2);}
+input[type=text] { width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none;}
+label { display:block; margin-top:10px; }
+button { width:100%; padding:12px; background:#00f0ff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:20px; color:#000;}
+.radio-group { display:flex; justify-content:space-around; margin-top:10px;}
+.radio-group label { margin:0; }
 </style>
 </head>
 <body>
-    <h1>QR CHECK-IN Bürotag</h1>
+<div class="container">
+<h2>QR CHECK-IN Bürotag</h2>
+<form action="{{ url_for('checkin') }}" method="post">
+    <label>Vorname</label>
+    <input type="text" name="vorname" required>
 
-    <form id="checkinForm">
-        <input type="text" name="vorname" placeholder="Vorname" required>
-        <input type="text" name="nachname" placeholder="Nachname" required>
+    <label>Nachname</label>
+    <input type="text" name="nachname" required>
 
-        <div class="radio-group">
-            <span>Bürotag nachholen:</span>
-            <div>
-                <input type="radio" id="nachholen_ja" name="nachholen" value="Ja" required>
-                <label for="nachholen_ja">Ja</label>
+    <label>Bürotag nachholen</label>
+    <div class="radio-group">
+        <label><input type="radio" name="nachholen" value="Ja" required> Ja</label>
+        <label><input type="radio" name="nachholen" value="Nein" required> Nein</label>
+    </div>
 
-                <input type="radio" id="nachholen_nein" name="nachholen" value="Nein" required>
-                <label for="nachholen_nein">Nein</label>
-            </div>
-        </div>
-
-        <button type="submit">CHECK-IN</button>
-    </form>
-
-    <div class="message" id="message"></div>
-
-    <script>
-        const form = document.getElementById('checkinForm');
-        const msg = document.getElementById('message');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(form);
-            const data = {};
-            formData.forEach((v,k) => data[k] = v);
-
-            // QR Token optional, backend erwartet es noch
-            data.token = "QR2025-ZUTRITT";
-
-            try {
-                const res = await fetch('/checkin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await res.json();
-                msg.textContent = result.message || result.error;
-            } catch (err) {
-                msg.textContent = "⚠️ Fehler beim Einchecken!";
-                console.error(err);
-            }
-        });
-    </script>
+    <button type="submit">CHECK-IN</button>
+</form>
+</div>
 </body>
 </html>
