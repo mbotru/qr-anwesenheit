@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QR Check-in</title>
+<title>QR CHECK-IN Bürotag</title>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
     body {
@@ -34,7 +34,7 @@
         box-shadow: 0 0 30px rgba(0,255,255,0.3);
         margin-top: 40px;
     }
-    input {
+    input[type="text"] {
         padding: 12px;
         margin: 10px 0;
         border: none;
@@ -44,6 +44,18 @@
         color: #fff;
     }
     input::placeholder { color: rgba(255,255,255,0.7); }
+    .radio-group {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        color: #fff;
+    }
+    label {
+        font-weight: bold;
+    }
+    input[type="radio"] {
+        margin-right: 5px;
+    }
     button {
         padding: 12px;
         margin-top: 15px;
@@ -71,15 +83,26 @@
     @media(max-width: 400px){
         h1 { font-size: 2rem; }
         form { padding: 20px; }
+        .radio-group { flex-direction: column; gap: 10px; }
     }
 </style>
 </head>
 <body>
-    <h1>QR Check-in</h1>
+    <h1>QR CHECK-IN Bürotag</h1>
     <form id="checkinForm">
         <input type="text" name="vorname" placeholder="Vorname" required>
         <input type="text" name="nachname" placeholder="Nachname" required>
-        <input type="text" name="nachholen" placeholder="Nachholen" required>
+
+        <div class="radio-group">
+            <label>Bürotag nachholen:</label>
+            <div>
+                <input type="radio" id="nachholen_ja" name="nachholen" value="Ja" required>
+                <label for="nachholen_ja">Ja</label>
+                <input type="radio" id="nachholen_nein" name="nachholen" value="Nein" required>
+                <label for="nachholen_nein">Nein</label>
+            </div>
+        </div>
+
         <input type="text" name="token" placeholder="QR Token" required>
         <button type="submit">Check-in</button>
     </form>
