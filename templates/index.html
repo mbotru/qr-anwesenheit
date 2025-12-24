@@ -6,6 +6,7 @@
 <title>QR CHECK-IN Bürotag</title>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
     body {
         font-family: 'Orbitron', sans-serif;
         background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -18,11 +19,13 @@
         min-height: 100vh;
         padding: 20px;
     }
+
     h1 {
         margin-top: 50px;
         font-size: 2.5rem;
         text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
     }
+
     form {
         display: flex;
         flex-direction: column;
@@ -34,6 +37,7 @@
         box-shadow: 0 0 30px rgba(0,255,255,0.3);
         margin-top: 40px;
     }
+
     input[type="text"] {
         padding: 12px;
         margin: 10px 0;
@@ -43,19 +47,27 @@
         background: rgba(255,255,255,0.1);
         color: #fff;
     }
+
     input::placeholder { color: rgba(255,255,255,0.7); }
+
     .radio-group {
         display: flex;
         justify-content: space-between;
-        margin: 10px 0;
+        margin: 15px 0;
         color: #fff;
+        flex-wrap: wrap;
     }
-    label {
+
+    .radio-group label {
+        margin-right: 5px;
         font-weight: bold;
     }
-    input[type="radio"] {
+
+    .radio-group input[type="radio"] {
         margin-right: 5px;
+        cursor: pointer;
     }
+
     button {
         padding: 12px;
         margin-top: 15px;
@@ -68,11 +80,13 @@
         cursor: pointer;
         transition: all 0.3s ease;
     }
+
     button:hover {
         background: linear-gradient(90deg, #0077ff, #00ffff);
         transform: translateY(-3px);
         box-shadow: 0 0 15px #00ffff;
     }
+
     .message {
         margin-top: 20px;
         font-size: 1.2rem;
@@ -80,6 +94,7 @@
         text-align: center;
         color: #00ffea;
     }
+
     @media(max-width: 400px){
         h1 { font-size: 2rem; }
         form { padding: 20px; }
@@ -89,13 +104,54 @@
 </head>
 <body>
     <h1>QR CHECK-IN Bürotag</h1>
+
     <form id="checkinForm">
         <input type="text" name="vorname" placeholder="Vorname" required>
         <input type="text" name="nachname" placeholder="Nachname" required>
 
         <div class="radio-group">
-            <label>Bürotag nachholen:</label>
+            <span>Bürotag nachholen:</span>
             <div>
                 <input type="radio" id="nachholen_ja" name="nachholen" value="Ja" required>
                 <label for="nachholen_ja">Ja</label>
-                <input type="radio" id
+
+                <input type="radio" id="nachholen_nein" name="nachholen" value="Nein" required>
+                <label for="nachholen_nein">Nein</label>
+            </div>
+        </div>
+
+        <button type="submit">CHECK-IN</button>
+    </form>
+
+    <div class="message" id="message"></div>
+
+    <script>
+        const form = document.getElementById('checkinForm');
+        const msg = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((v,k) => data[k] = v);
+
+            // QR Token optional, backend erwartet es noch
+            data.token = "QR2025-ZUTRITT";
+
+            try {
+                const res = await fetch('/checkin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                msg.textContent = result.message || result.error;
+            } catch (err) {
+                msg.textContent = "⚠️ Fehler beim Einchecken!";
+                console.error(err);
+            }
+        });
+    </script>
+</body>
+</html>
