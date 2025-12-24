@@ -16,9 +16,7 @@
   --accent: #3b82f6;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   height: 100%;
@@ -48,11 +46,11 @@ body {
 
 h1 {
   text-align: center;
-  margin: 0 0 24px;
+  margin-bottom: 24px;
   font-size: 22px;
 }
 
-input, select, button {
+input, button {
   width: 100%;
   padding: 14px 16px;
   margin-bottom: 14px;
@@ -63,11 +61,51 @@ input, select, button {
   font-size: 16px;
 }
 
+input::placeholder {
+  color: var(--muted);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.radio-group {
+  margin-bottom: 18px;
+}
+
+.radio-title {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+.radio-options {
+  display: flex;
+  gap: 14px;
+}
+
+.radio-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
 button {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
   font-weight: 600;
   cursor: pointer;
+}
+
+button:active {
+  transform: scale(0.97);
 }
 </style>
 </head>
@@ -77,14 +115,22 @@ button {
 <div class="card">
   <h1>Anwesenheit Büro</h1>
 
-  <input type="text" placeholder="Name">
-  
-  <select>
-    <option>Bitte wählen</option>
-    <option>Im Büro</option>
-    <option>Homeoffice</option>
-    <option>Abwesend</option>
-  </select>
+  <input type="text" placeholder="Vorname" required>
+  <input type="text" placeholder="Nachname" required>
+
+  <div class="radio-group">
+    <div class="radio-title">Bürotag nachholen?</div>
+    <div class="radio-options">
+      <label>
+        <input type="radio" name="nachholen" value="ja" required>
+        Ja
+      </label>
+      <label>
+        <input type="radio" name="nachholen" value="nein">
+        Nein
+      </label>
+    </div>
+  </div>
 
   <button>Senden</button>
 </div>
