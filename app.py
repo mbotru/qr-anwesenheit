@@ -4,11 +4,10 @@ from flask import (
 )
 import gspread
 from google.oauth2.service_account import Credentials
-import os, json
+import os, json, csv
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from io import BytesIO
-import csv
 
 # ---------------------------
 # APP
@@ -41,6 +40,8 @@ scopes = [
 creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
 gc = gspread.authorize(creds)
 sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+
+HEADERS = ["Zeitstempel", "Datum", "Vorname", "Nachname", "Nachholen"]
 
 # ---------------------------
 # ROUTES
@@ -93,4 +94,27 @@ def admin():
             return redirect(url_for("admin_dashboard"))
         return render_template("admin_login.html", error="Falsches Passwort")
 
-    return render_template("a_
+    return render_template("admin_login.html")
+
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin"))
+
+    records = sheet.get_all_records()
+
+    # Statistik: Check-ins pro Tag
+    stats = {}
+    for r in records:
+        d = r.get("Datum")
+        stats[d] = stats.get(d, 0) + 1
+
+    return render_template(
+        "admin_dashboard.html",
+        records=records,
+        stats=stats
+    )
+
+# ---------------------------
+# CSV EXPORT – ALLE
+# -----------------------
