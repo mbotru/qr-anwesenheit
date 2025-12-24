@@ -1,23 +1,86 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Check-in</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-        input, button { padding: 10px; margin: 5px; width: 200px; }
-        button { cursor: pointer; }
-        .message { margin-top: 20px; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Check-in</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+    body {
+        font-family: 'Orbitron', sans-serif;
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color: #ffffff;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 100vh;
+        padding: 20px;
+    }
+    h1 {
+        margin-top: 50px;
+        font-size: 2.5rem;
+        text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+    }
+    form {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 350px;
+        background: rgba(255,255,255,0.05);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 0 30px rgba(0,255,255,0.3);
+        margin-top: 40px;
+    }
+    input {
+        padding: 12px;
+        margin: 10px 0;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+    }
+    input::placeholder { color: rgba(255,255,255,0.7); }
+    button {
+        padding: 12px;
+        margin-top: 15px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #00ffff, #0077ff);
+        color: #000;
+        font-weight: bold;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    button:hover {
+        background: linear-gradient(90deg, #0077ff, #00ffff);
+        transform: translateY(-3px);
+        box-shadow: 0 0 15px #00ffff;
+    }
+    .message {
+        margin-top: 20px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        text-align: center;
+        color: #00ffea;
+    }
+    @media(max-width: 400px){
+        h1 { font-size: 2rem; }
+        form { padding: 20px; }
+    }
+</style>
 </head>
 <body>
     <h1>QR Check-in</h1>
     <form id="checkinForm">
-        <input type="text" name="vorname" placeholder="Vorname" required><br>
-        <input type="text" name="nachname" placeholder="Nachname" required><br>
-        <input type="text" name="nachholen" placeholder="Nachholen" required><br>
-        <input type="text" name="token" placeholder="QR Token" required><br>
+        <input type="text" name="vorname" placeholder="Vorname" required>
+        <input type="text" name="nachname" placeholder="Nachname" required>
+        <input type="text" name="nachholen" placeholder="Nachholen" required>
+        <input type="text" name="token" placeholder="QR Token" required>
         <button type="submit">Check-in</button>
     </form>
     <div class="message" id="message"></div>
