@@ -14,73 +14,84 @@
         justify-content: center;
         align-items: center;
         min-height: 100vh;
+        padding: 10px;
     }
     .container {
         background: #111;
         padding: 30px;
         border-radius: 12px;
-        box-shadow: 0 0 20px #00f0ff44;
+        box-shadow: 0 0 25px #00ffff44;
         max-width: 400px;
-        width: 90%;
+        width: 100%;
     }
     h1 {
         text-align: center;
-        color: #00f0ff;
+        color: #00ffff;
     }
-    input[type="text"], select {
+    input[type="text"] {
         width: 100%;
-        padding: 10px;
+        padding: 12px;
         margin: 8px 0;
         border: none;
         border-radius: 6px;
         background: #222;
         color: #fff;
+        font-size: 16px;
     }
     .radio-group {
-        display: flex;
-        justify-content: space-around;
-        margin: 12px 0;
+        margin: 10px 0;
     }
-    input[type="radio"] {
-        margin-right: 6px;
+    .radio-group label {
+        margin-right: 20px;
+        font-size: 16px;
+        cursor: pointer;
     }
     button {
         width: 100%;
-        padding: 12px;
-        background: #00f0ff;
+        padding: 14px;
+        margin-top: 10px;
+        background: #00ffff;
         border: none;
         border-radius: 8px;
-        color: #000;
+        color: #111;
         font-weight: bold;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 18px;
         transition: 0.3s;
     }
     button:hover {
-        background: #00c0cc;
+        background: #00cccc;
     }
     .success {
         text-align: center;
-        color: #00ff80;
-        margin-top: 10px;
+        color: #00ff88;
+        margin-bottom: 10px;
+        font-weight: bold;
     }
 </style>
 </head>
 <body>
 <div class="container">
     <h1>QR CHECK-IN Bürotag</h1>
+
     {% if success %}
-        <div class="success">Check-In erfolgreich!</div>
+        <div class="success">Check-in erfolgreich!</div>
     {% endif %}
+
     <form method="POST">
         <input type="text" name="vorname" placeholder="Vorname" required>
         <input type="text" name="nachname" placeholder="Nachname" required>
+
         <div class="radio-group">
-            <label><input type="radio" name="buerotag_nachholen" value="Ja" required> Ja</label>
-            <label><input type="radio" name="buerotag_nachholen" value="Nein" required> Nein</label>
+            <label>
+                <input type="radio" name="buerotag_nachholen" value="Ja" required> Ja
+            </label>
+            <label>
+                <input type="radio" name="buerotag_nachholen" value="Nein" required> Nein
+            </label>
         </div>
+
         <button type="submit">CHECK-IN</button>
     </form>
 </div>
-</body>
-</html>
+</b
