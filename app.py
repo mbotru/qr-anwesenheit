@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 import os, json, csv
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 
 # ---------------------------
 # APP INIT
@@ -151,9 +151,9 @@ def admin_export_csv_by_date(export_date):
 # ---------------------------
 def _build_csv(records, filename):
     buffer = BytesIO()
-    buffer.write("\ufeff".encode("utf-8"))  # Excel UTF-8 BOM
+    wrapper = TextIOWrapper(buffer, encoding="utf-8-sig", newline="")
 
-    writer = csv.writer(buffer, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+    writer = csv.writer(wrapper, delimiter=";", quoting=csv.QUOTE_MINIMAL)
     writer.writerow(HEADERS)
 
     for r in records:
@@ -165,7 +165,9 @@ def _build_csv(records, filename):
             r.get("Nachholen", "")
         ])
 
+    wrapper.flush()
     buffer.seek(0)
+
     return send_file(
         buffer,
         mimetype="text/csv; charset=utf-8",
