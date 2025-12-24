@@ -98,34 +98,4 @@
             <div>
                 <input type="radio" id="nachholen_ja" name="nachholen" value="Ja" required>
                 <label for="nachholen_ja">Ja</label>
-                <input type="radio" id="nachholen_nein" name="nachholen" value="Nein" required>
-                <label for="nachholen_nein">Nein</label>
-            </div>
-        </div>
-
-        <input type="text" name="token" placeholder="QR Token" required>
-        <button type="submit">Check-in</button>
-    </form>
-    <div class="message" id="message"></div>
-
-    <script>
-        const form = document.getElementById('checkinForm');
-        const msg = document.getElementById('message');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const data = {};
-            formData.forEach((v,k) => data[k] = v);
-
-            const res = await fetch('/checkin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            msg.textContent = result.message || result.error;
-        });
-    </script>
-</body>
-</html>
+                <input type="radio" id
