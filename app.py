@@ -1,76 +1,69 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, send_file
 from datetime import datetime, date
 import csv
 import io
-import os
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # Für Flash Messages
 
-# Speicher für Checkins (in-memory, kann auf DB umgestellt werden)
+# In-Memory Storage für Check-Ins
 records = []
 
-# ----- ROUTES -----
+# Admin Credentials
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "password"
 
-@app.route("/", methods=["GET", "POST"])
+# CSV Header
+HEADERS = ["Vorname", "Nachname", "Bürotag nachholen", "Datum", "Uhrzeit"]
+
+@app.route("/")
 def index():
-    if request.method == "POST":
-        firstname = request.form.get("firstname", "").strip()
-        lastname = request.form.get("lastname", "").strip()
-        makeup = request.form.get("makeup", "nein")
-        checkin_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        if not firstname or not lastname:
-            flash("Bitte Vorname und Nachname ausfüllen!", "error")
-            return redirect(url_for("index"))
-
-        # Record speichern
-        records.append({
-            "Vorname": firstname,
-            "Nachname": lastname,
-            "Bürotag nachholen": makeup,
-            "Check-in Zeit": checkin_time
-        })
-        flash(f"{firstname} {lastname} eingecheckt!", "success")
-        return redirect(url_for("index"))
-
     return render_template("index.html")
+
+@app.route("/checkin", methods=["POST"])
+def checkin():
+    vorname = request.form.get("vorname")
+    nachname = request.form.get("nachname")
+    nachholen = request.form.get("nachholen")
+    now = datetime.now()
+    record = {
+        "Vorname": vorname,
+        "Nachname": nachname,
+        "Bürotag nachholen": nachholen,
+        "Datum": now.date().isoformat(),
+        "Uhrzeit": now.time().strftime("%H:%M:%S")
+    }
+    records.append(record)
+    return render_template("success.html", record=record)
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
-    password = request.form.get("password", "")
     if request.method == "POST":
-        if password == "admin123":  # Admin-Passwort (kann DB/ENV sein)
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             return redirect(url_for("dashboard"))
         else:
-            flash("Falsches Passwort!", "error")
-            return redirect(url_for("admin"))
+            return render_template("admin.html", error="Falscher Benutzername oder Passwort")
     return render_template("admin.html")
 
 @app.route("/admin/dashboard")
 def dashboard():
-    return render_template("admin_dashboard.html", records=records)
+    return render_template("dashboard.html", records=records)
 
 @app.route("/admin/export/csv")
 def export_csv():
-    # CSV-Datei in-memory erstellen
-    output = io.StringIO()
-    fieldnames = ["Vorname", "Nachname", "Bürotag nachholen", "Check-in Zeit"]
-    writer = csv.DictWriter(output, fieldnames=fieldnames)
-    writer.writeheader()
-    for rec in records:
-        writer.writerow(rec)
-
-    output.seek(0)
-    filename = f"checkin_{date.today().isoformat()}.csv"
-
+    si = io.StringIO()
+    writer = csv.writer(si)
+    writer.writerow(HEADERS)
+    for r in records:
+        writer.writerow([r[h] for h in HEADERS])
+    si.seek(0)
     return send_file(
-        io.BytesIO(output.getvalue().encode()),
+        io.BytesIO(si.getvalue().encode("utf-8")),
         mimetype="text/csv",
         as_attachment=True,
-        download_name=filename
+        download_name=f"checkin_{date.today().isoformat()}.csv"
     )
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
