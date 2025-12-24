@@ -5,11 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Login</title>
 <style>
-body { font-family: 'Roboto', sans-serif; background:#0d0d0d; color:#fff; display:flex; align-items:center; justify-content:center; min-height:100vh;}
-.container { background:#1a1a1a; padding:2rem; border-radius:12px; width:300px; text-align:center;}
-input { width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none;}
-button { width:100%; padding:12px; background:#00f0ff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; color:#000;}
-.error { color:#ff4444; }
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+}
+
+.container {
+    background: rgba(0,255,255,0.05);
+    padding:2rem;
+    border-radius:16px;
+    width:300px;
+    text-align:center;
+    box-shadow:0 0 30px rgba(0,255,255,0.4);
+    backdrop-filter: blur(10px);
+}
+
+input { 
+    width:100%; 
+    padding:12px; 
+    margin:10px 0; 
+    border-radius:8px; 
+    border:none; 
+    background:#111;
+    color:#fff;
+}
+
+input::placeholder {
+    color:#888;
+}
+
+button {
+    width:100%;
+    padding:14px;
+    background:#00f0ff;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+    color:#000;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background:#00c8cc;
+}
+
+.error {
+    color:#ff4444;
+    margin-bottom:10px;
+}
+
+@media (max-width:480px){
+    .container { width:90%; padding:1.5rem;}
+    button { padding:12px;}
+}
 </style>
 </head>
 <body>
