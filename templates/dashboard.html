@@ -1,41 +1,38 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+<style>
+body { font-family: 'Roboto', sans-serif; background:#0d0d0d; color:#fff; margin:0; padding:2rem;}
+h2 { color:#00f0ff;}
+table { width:100%; border-collapse:collapse; margin-top:20px;}
+th, td { border:1px solid #00f0ff; padding:8px; text-align:left;}
+th { background:#111; }
+a.button { display:inline-block; margin-top:10px; padding:10px 15px; background:#00f0ff; color:#000; text-decoration:none; border-radius:8px; }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto py-8">
-        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-800">Admin Dashboard</h1>
-
-        <div class="text-center mb-6">
-            <a href="{{ url_for('export_csv') }}" class="bg-indigo-800 text-white px-6 py-2 rounded-md hover:bg-indigo-900 transition">CSV Export nach Datum</a>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white rounded-xl shadow">
-                <thead class="bg-indigo-800 text-white">
-                    <tr>
-                        <th class="py-2 px-4">Vorname</th>
-                        <th class="py-2 px-4">Nachname</th>
-                        <th class="py-2 px-4">Bürotag nachholen</th>
-                        <th class="py-2 px-4">Check-in Zeit</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for rec in records %}
-                    <tr class="text-center border-b">
-                        <td class="py-2 px-4">{{ rec['Vorname'] }}</td>
-                        <td class="py-2 px-4">{{ rec['Nachname'] }}</td>
-                        <td class="py-2 px-4">{{ rec['Bürotag nachholen'] }}</td>
-                        <td class="py-2 px-4">{{ rec['Check-in Zeit'] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+<body>
+<h2>Admin Dashboard</h2>
+<a class="button" href="{{ url_for('export_csv') }}">CSV Export</a>
+<table>
+<tr>
+    <th>Vorname</th>
+    <th>Nachname</th>
+    <th>Bürotag nachholen</th>
+    <th>Datum</th>
+    <th>Uhrzeit</th>
+</tr>
+{% for r in records %}
+<tr>
+    <td>{{ r['Vorname'] }}</td>
+    <td>{{ r['Nachname'] }}</td>
+    <td>{{ r['Bürotag nachholen'] }}</td>
+    <td>{{ r['Datum'] }}</td>
+    <td>{{ r['Uhrzeit'] }}</td>
+</tr>
+{% endfor %}
+</table>
 </body>
 </html>
