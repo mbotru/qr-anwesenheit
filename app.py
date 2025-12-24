@@ -1,128 +1,76 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session, send_file
-import gspread
-from google.oauth2.service_account import Credentials
-import os, json
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 from datetime import datetime, date
-from zoneinfo import ZoneInfo
-import pandas as pd
-import io
 import csv
+import io
+import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "supersecretkey")
+app.secret_key = "supersecretkey"  # Für Flash Messages
 
-# ---------------------------
-# CONFIG
-# ---------------------------
-SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID")
-QR_TOKEN = os.environ.get("QR_TOKEN", "QR2025-ZUTRITT")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
-tz = ZoneInfo("Europe/Berlin")
+# Speicher für Checkins (in-memory, kann auf DB umgestellt werden)
+records = []
 
-# ---------------------------
-# GOOGLE SHEETS
-# ---------------------------
-creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
-scopes = ["https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"]
-creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-gc = gspread.authorize(creds)
-sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+# ----- ROUTES -----
 
-# ---------------------------
-# ROUTES
-# ---------------------------
-
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def index():
+    if request.method == "POST":
+        firstname = request.form.get("firstname", "").strip()
+        lastname = request.form.get("lastname", "").strip()
+        makeup = request.form.get("makeup", "nein")
+        checkin_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        if not firstname or not lastname:
+            flash("Bitte Vorname und Nachname ausfüllen!", "error")
+            return redirect(url_for("index"))
+
+        # Record speichern
+        records.append({
+            "Vorname": firstname,
+            "Nachname": lastname,
+            "Bürotag nachholen": makeup,
+            "Check-in Zeit": checkin_time
+        })
+        flash(f"{firstname} {lastname} eingecheckt!", "success")
+        return redirect(url_for("index"))
+
     return render_template("index.html")
 
-@app.route("/checkin", methods=["POST"])
-def checkin():
-    data = request.get_json()
-    vorname = data.get("vorname")
-    nachname = data.get("nachname")
-    nachholen = data.get("nachholen")
-    token = data.get("token", QR_TOKEN)
-
-    if not vorname or not nachname or not nachholen or token != QR_TOKEN:
-        return jsonify(error="Unvollständige oder ungültige Daten"), 400
-
-    now = datetime.now(tz)
-    today = now.date().isoformat()
-    timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-
-    # Prüfen, ob heute schon eingecheckt
-    rows = sheet.get_all_records()
-    for r in rows:
-        if r.get("Vorname") == vorname and r.get("Nachname") == nachname and r.get("Datum") == today:
-            return jsonify(message="⚠️ Heute bereits eingecheckt"), 200
-
-    # Eintragen
-    sheet.append_row([timestamp, today, vorname, nachname, nachholen])
-    return jsonify(message="✅ Check-in erfolgreich"), 200
-
-# ---------------------------
-# ADMIN LOGIN
-# ---------------------------
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
+    password = request.form.get("password", "")
     if request.method == "POST":
-        password = request.form.get("password")
-        if password == ADMIN_PASSWORD:
-            session['admin_logged_in'] = True
-            return redirect(url_for("admin_dashboard"))
+        if password == "admin123":  # Admin-Passwort (kann DB/ENV sein)
+            return redirect(url_for("dashboard"))
         else:
-            return render_template("admin_login.html", error="Falsches Passwort")
-    return render_template("admin_login.html")
+            flash("Falsches Passwort!", "error")
+            return redirect(url_for("admin"))
+    return render_template("admin.html")
 
 @app.route("/admin/dashboard")
-def admin_dashboard():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for("admin"))
+def dashboard():
+    return render_template("admin_dashboard.html", records=records)
 
-    records = sheet.get_all_records()
-    df = pd.DataFrame(records)
-
-    # Statistik: Check-Ins pro Tag
-    stats = df.groupby("Datum").size().to_dict()
-
-    return render_template("admin_dashboard.html", stats=stats, records=records)
-
-# ---------------------------
-# CSV EXPORT NACH DATUM
-# ---------------------------
 @app.route("/admin/export/csv")
-def admin_export_csv_all():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for("admin"))
-
-    records = sheet.get_all_records()
-    return _build_csv(records, f"checkin_{date.today().isoformat()}.csv")
-
-def _build_csv(records, filename):
+def export_csv():
+    # CSV-Datei in-memory erstellen
     output = io.StringIO()
-    writer = csv.writer(output)
-    # Header
-    if records:
-        HEADERS = records[0].keys()
-        writer.writerow(HEADERS)
-        for row in records:
-            writer.writerow([row[h] for h in HEADERS])
+    fieldnames = ["Vorname", "Nachname", "Bürotag nachholen", "Check-in Zeit"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for rec in records:
+        writer.writerow(rec)
+
     output.seek(0)
+    filename = f"checkin_{date.today().isoformat()}.csv"
+
     return send_file(
-        io.BytesIO(output.getvalue().encode("utf-8")),
+        io.BytesIO(output.getvalue().encode()),
         mimetype="text/csv",
-        download_name=filename,
-        as_attachment=True
+        as_attachment=True,
+        download_name=filename
     )
 
-@app.route("/admin/logout")
-def admin_logout():
-    session.pop('admin_logged_in', None)
-    return redirect(url_for("admin"))
-
-# ---------------------------
-# START
-# ---------------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=True)
