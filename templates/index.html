@@ -1,177 +1,45 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>CHECK-IN – Anwesenheit Bürotag</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-body{
-  min-height:100vh;
-  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-family:Arial, sans-serif;
-  color:white;
-  padding: 10px;
-}
-.card{
-  width:90%;
-  max-width:420px;
-  background:rgba(255,255,255,0.1);
-  backdrop-filter:blur(12px);
-  border-radius:20px;
-  padding:2rem;
-  display:flex;
-  flex-direction:column;
-  gap:1rem;
-}
-input{
-  width:100%;
-  padding:1rem;
-  border-radius:12px;
-  border:none;
-  background:rgba(255,255,255,0.2);
-  color:white;
-  font-size:1rem;
-}
-.radio-group{
-  display:flex;
-  gap:10px;
-  margin-top:0.5rem;
-}
-.radio{
-  flex:1;
-  padding:1rem;
-  text-align:center;
-  border-radius:12px;
-  background:rgba(255,255,255,0.15);
-  cursor:pointer;
-  font-size:1rem;
-  user-select: none;
-  transition: background 0.2s;
-}
-.radio.active{
-  background:rgba(0,229,255,0.4);
-}
-button{
-  width:100%;
-  padding:1.2rem;
-  border:none;
-  border-radius:14px;
-  background:linear-gradient(135deg,#00e5ff,#00bcd4);
-  font-weight:bold;
-  font-size:1rem;
-  cursor:pointer;
-}
-button:active{
-  transform: scale(0.98);
-}
-.error{
-  color:#ff5252;
-  margin-top:0.5rem;
-  display:none;
-  font-size:0.9rem;
-  text-align:center;
-}
-@media (max-width: 360px){
-  .card{
-    padding:1.5rem;
-  }
-  input, .radio, button{
-    padding:0.8rem;
-    font-size:0.9rem;
-  }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Check-in</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        input, button { padding: 10px; margin: 5px; width: 200px; }
+        button { cursor: pointer; }
+        .message { margin-top: 20px; font-weight: bold; }
+    </style>
 </head>
 <body>
+    <h1>QR Check-in</h1>
+    <form id="checkinForm">
+        <input type="text" name="vorname" placeholder="Vorname" required><br>
+        <input type="text" name="nachname" placeholder="Nachname" required><br>
+        <input type="text" name="nachholen" placeholder="Nachholen" required><br>
+        <input type="text" name="token" placeholder="QR Token" required><br>
+        <button type="submit">Check-in</button>
+    </form>
+    <div class="message" id="message"></div>
 
-<div class="card">
-  <h1 style="text-align:center; font-size:1.5rem;">CHECK-IN<br>Anwesenheit Bürotag</h1>
+    <script>
+        const form = document.getElementById('checkinForm');
+        const msg = document.getElementById('message');
 
-  <!-- Vorname und Nachname -->
-  <input id="vorname" placeholder="Vorname" autocomplete="given-name">
-  <input id="nachname" placeholder="Nachname" autocomplete="family-name">
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((v,k) => data[k] = v);
 
-  <!-- Nachholen -->
-  <div class="radio-group">
-    <div class="radio" id="ja">Ja</div>
-    <div class="radio" id="nein">Nein</div>
-  </div>
-
-  <div class="error" id="error">Bitte alle Felder ausfüllen</div>
-  <button id="checkinBtn">Check-in bestätigen</button>
-</div>
-
-<script>
-let nachholen = null;
-
-// Elemente speichern
-const jaEl = document.getElementById('ja');
-const neinEl = document.getElementById('nein');
-const vornameEl = document.getElementById('vorname');
-const nachnameEl = document.getElementById('nachname');
-const errorEl = document.getElementById('error');
-const checkinBtn = document.getElementById('checkinBtn');
-
-// Radio-Buttons Klick
-jaEl.addEventListener('click', () => setNachholen('Ja'));
-neinEl.addEventListener('click', () => setNachholen('Nein'));
-
-function setNachholen(v){
-  nachholen = v;
-  jaEl.classList.remove("active");
-  neinEl.classList.remove("active");
-  document.getElementById(v.toLowerCase()).classList.add("active");
-}
-
-// Check-in Button
-checkinBtn.addEventListener('click', () => {
-  const vorname = vornameEl.value.trim();
-  const nachname = nachnameEl.value.trim();
-
-  if(!vorname || !nachname || !nachholen){
-    errorEl.style.display="block";
-    return;
-  }
-  errorEl.style.display="none";
-
-  const payload = {
-    vorname: vorname,
-    nachname: nachname,
-    nachholen: nachholen,
-    token: "QR2025-ZUTRITT"
-  };
-
-  // Debug: prüfen ob alle Daten korrekt gesendet werden
-  console.log("Payload:", payload);
-
-  fetch("/checkin",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
-  })
-  .then(r => r.json())
-  .then(d => {
-    alert(d.message || d.error);
-    if(d.message) {
-      // Felder zurücksetzen
-      vornameEl.value = "";
-      nachnameEl.value = "";
-      nachholen = null;
-      jaEl.classList.remove("active");
-      neinEl.classList.remove("active");
-    }
-  })
-  .catch(err => alert("Fehler beim Check-in: " + err));
-});
-</script>
-
+            const res = await fetch('/checkin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            msg.textContent = result.message || result.error;
+        });
+    </script>
 </body>
 </html>
