@@ -1,103 +1,41 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-    body {
-        font-family: 'Orbitron', sans-serif;
-        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-        color: #fff;
-        margin: 0;
-        padding: 20px;
-    }
-    h1 { text-align: center; font-size: 2.5rem; margin-bottom: 20px; text-shadow: 0 0 10px #00ffff; }
-    .buttons {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-    a.button {
-        padding: 10px 15px;
-        border-radius: 10px;
-        text-decoration: none;
-        background: linear-gradient(90deg, #00ffff, #0077ff);
-        color: #000;
-        font-weight: bold;
-        transition: all 0.3s ease;
-    }
-    a.button:hover {
-        background: linear-gradient(90deg, #0077ff, #00ffff);
-        transform: translateY(-2px);
-        box-shadow: 0 0 15px #00ffff;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-        overflow-x: auto;
-        display: block;
-    }
-    th, td {
-        border: 1px solid rgba(255,255,255,0.2);
-        padding: 8px;
-        text-align: left;
-        min-width: 100px;
-    }
-    th {
-        background: rgba(0,255,255,0.1);
-        text-shadow: 0 0 5px #00ffff;
-    }
-    tr:nth-child(even) { background: rgba(255,255,255,0.05); }
-    h2 { margin-top: 40px; text-shadow: 0 0 5px #00ffff; }
-    @media(max-width: 600px){
-        table { font-size: 0.9rem; }
-        h1 { font-size: 2rem; }
-        h2 { font-size: 1.5rem; }
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Admin Dashboard</h1>
-    <div class="buttons">
-        <a class="button" href="{{ url_for('admin_logout') }}">Logout</a>
-        <a class="button" href="{{ url_for('admin_export_csv_all') }}">CSV Export (Alle)</a>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-800">Admin Dashboard</h1>
+
+        <div class="text-center mb-6">
+            <a href="{{ url_for('export_csv') }}" class="bg-indigo-800 text-white px-6 py-2 rounded-md hover:bg-indigo-900 transition">CSV Export nach Datum</a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white rounded-xl shadow">
+                <thead class="bg-indigo-800 text-white">
+                    <tr>
+                        <th class="py-2 px-4">Vorname</th>
+                        <th class="py-2 px-4">Nachname</th>
+                        <th class="py-2 px-4">Bürotag nachholen</th>
+                        <th class="py-2 px-4">Check-in Zeit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr class="text-center border-b">
+                        <td class="py-2 px-4">{{ rec['Vorname'] }}</td>
+                        <td class="py-2 px-4">{{ rec['Nachname'] }}</td>
+                        <td class="py-2 px-4">{{ rec['Bürotag nachholen'] }}</td>
+                        <td class="py-2 px-4">{{ rec['Check-in Zeit'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <h2>Check-ins Statistik pro Tag</h2>
-    <table>
-        <tr>
-            <th>Datum</th>
-            <th>Anzahl Check-ins</th>
-            <th>CSV Export</th>
-        </tr>
-        {% for d, count in stats.items() %}
-        <tr>
-            <td>{{ d }}</td>
-            <td>{{ count }}</td>
-            <td><a class="button" href="{{ url_for('admin_export_csv_by_date', export_date=d) }}">CSV</a></td>
-        </tr>
-        {% endfor %}
-    </table>
-
-    <h2>Alle Check-ins</h2>
-    <table>
-        <tr>
-            {% for header in records[0].keys() %}
-            <th>{{ header }}</th>
-            {% endfor %}
-        </tr>
-        {% for r in records %}
-        <tr>
-            {% for value in r.values() %}
-            <td>{{ value }}</td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </table>
 </body>
 </html>
