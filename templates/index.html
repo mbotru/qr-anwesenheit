@@ -4,111 +4,83 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QR CHECK-IN Bürotag</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
-body {
-    font-family: 'Roboto', sans-serif;
-    margin:0;
-    padding:0;
-    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-    color:#fff;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    min-height:100vh;
-}
-
-.container {
-    background: rgba(0, 255, 255, 0.05);
-    padding:2rem;
-    border-radius:16px;
-    max-width:400px;
-    width:90%;
-    box-shadow: 0 0 30px rgba(0,255,255,0.4);
-    backdrop-filter: blur(10px);
-}
-
-h2 {
-    text-align:center;
-    font-size:1.8rem;
-    color:#00f0ff;
-    margin-bottom:1rem;
-}
-
-input[type=text] {
-    width:100%;
-    padding:12px;
-    margin:10px 0;
-    border-radius:8px;
-    border:none;
-    background: #111;
-    color:#fff;
-}
-
-input[type=text]::placeholder {
-    color: #888;
-}
-
-button {
-    width:100%;
-    padding:14px;
-    background:#00f0ff;
-    border:none;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-    margin-top:20px;
-    color:#000;
-    transition: all 0.3s ease;
-}
-
-button:hover {
-    background:#00c8cc;
-}
-
-.radio-group {
-    display:flex;
-    justify-content:space-around;
-    margin-top:10px;
-}
-
-.radio-group label {
-    margin:0;
-    font-weight:bold;
-}
-
-@media (max-width: 480px) {
-    .container {
-        padding:1.5rem;
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', sans-serif;
+        background: #0a0a0a;
+        color: #f0f0f0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
     }
-    h2 {
-        font-size:1.5rem;
+    .container {
+        background: #111;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 0 20px #00f0ff44;
+        max-width: 400px;
+        width: 90%;
+    }
+    h1 {
+        text-align: center;
+        color: #00f0ff;
+    }
+    input[type="text"], select {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 6px;
+        background: #222;
+        color: #fff;
+    }
+    .radio-group {
+        display: flex;
+        justify-content: space-around;
+        margin: 12px 0;
+    }
+    input[type="radio"] {
+        margin-right: 6px;
     }
     button {
-        padding:12px;
+        width: 100%;
+        padding: 12px;
+        background: #00f0ff;
+        border: none;
+        border-radius: 8px;
+        color: #000;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 16px;
+        transition: 0.3s;
     }
-}
+    button:hover {
+        background: #00c0cc;
+    }
+    .success {
+        text-align: center;
+        color: #00ff80;
+        margin-top: 10px;
+    }
 </style>
 </head>
 <body>
 <div class="container">
-<h2>QR CHECK-IN Bürotag</h2>
-<form action="{{ url_for('checkin') }}" method="post">
-    <label>Vorname</label>
-    <input type="text" name="vorname" placeholder="Vorname" required>
-
-    <label>Nachname</label>
-    <input type="text" name="nachname" placeholder="Nachname" required>
-
-    <label>Bürotag nachholen</label>
-    <div class="radio-group">
-        <label><input type="radio" name="nachholen" value="Ja" required> Ja</label>
-        <label><input type="radio" name="nachholen" value="Nein" required> Nein</label>
-    </div>
-
-    <button type="submit">CHECK-IN</button>
-</form>
+    <h1>QR CHECK-IN Bürotag</h1>
+    {% if success %}
+        <div class="success">Check-In erfolgreich!</div>
+    {% endif %}
+    <form method="POST">
+        <input type="text" name="vorname" placeholder="Vorname" required>
+        <input type="text" name="nachname" placeholder="Nachname" required>
+        <div class="radio-group">
+            <label><input type="radio" name="buerotag_nachholen" value="Ja" required> Ja</label>
+            <label><input type="radio" name="buerotag_nachholen" value="Nein" required> Nein</label>
+        </div>
+        <button type="submit">CHECK-IN</button>
+    </form>
 </div>
 </body>
 </html>
