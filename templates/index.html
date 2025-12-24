@@ -35,7 +35,6 @@ body {
   padding: 20px;
 }
 
-/* === CARD === */
 .card {
   width: 100%;
   max-width: 390px;
@@ -45,23 +44,14 @@ body {
   border-radius: 20px;
   padding: 28px;
   box-shadow: 0 30px 60px rgba(0,0,0,0.6);
-  animation: fadeIn 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: none; }
 }
 
 h1 {
   text-align: center;
   margin: 0 0 24px;
   font-size: 22px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
 }
 
-/* === FORM === */
 input, select, button {
   width: 100%;
   padding: 14px 16px;
@@ -73,49 +63,31 @@ input, select, button {
   font-size: 16px;
 }
 
-input::placeholder {
-  color: var(--muted);
-}
-
-input:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
 button {
-  margin-top: 6px;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
   font-weight: 600;
-  letter-spacing: 0.3px;
   cursor: pointer;
 }
-
-button:active {
-  transform: scale(0.97);
-}
-
-/* === FEEDBACK === */
-.success, .error {
-  text-align: center;
-  margin-bottom: 16px;
-  font-size: 15px;
-}
-
-.success { color: #4ade80; }
-.error { color: #f87171; }
-
-/* === FOOTER === */
-.footer {
-  margin-top: 14px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-/* === SAFARI FIX === */
-@supports (-webkit-touch-callout: none) {
-  body { min-height: -webkit-fill-available; }
-}
 </style>
-</
+</head>
+
+<body>
+
+<div class="card">
+  <h1>Anwesenheit Büro</h1>
+
+  <input type="text" placeholder="Name">
+  
+  <select>
+    <option>Bitte wählen</option>
+    <option>Im Büro</option>
+    <option>Homeoffice</option>
+    <option>Abwesend</option>
+  </select>
+
+  <button>Senden</button>
+</div>
+
+</body>
+</html>
