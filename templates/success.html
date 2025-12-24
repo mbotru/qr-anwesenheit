@@ -1,1 +1,22 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check-in erfolgreich</title>
+<style>
+body { font-family: 'Roboto', sans-serif; background:#0d0d0d; color:#fff; display:flex; align-items:center; justify-content:center; min-height:100vh;}
+.container { background:#1a1a1a; padding:2rem; border-radius:12px; text-align:center;}
+a { color:#00f0ff; text-decoration:none; font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Check-in erfolgreich!</h2>
+<p>{{ record['Vorname'] }} {{ record['Nachname'] }} – {{ record['Bürotag nachholen'] }}</p>
+<p>Datum: {{ record['Datum'] }} Uhrzeit: {{ record['Uhrzeit'] }}</p>
+<a href="{{ url_for('index') }}">Zurück</a>
+</div>
+</body>
+</html>
 
