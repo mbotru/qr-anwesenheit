@@ -5,68 +5,101 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QR CHECK-IN Bürotag</title>
 <style>
-    body {
+    /* Basis & Body */
+    * {
+        box-sizing: border-box;
         margin: 0;
+        padding: 0;
+    }
+    body, html {
+        height: 100%;
         font-family: 'Segoe UI', sans-serif;
-        background: #0a0a0a;
-        color: #f0f0f0;
+        background: linear-gradient(135deg, #0a0a0a, #111111);
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
-        padding: 10px;
     }
+
+    /* Container */
     .container {
         background: #111;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 0 25px #00ffff44;
+        padding: 40px 30px;
+        border-radius: 16px;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
         max-width: 400px;
         width: 100%;
-    }
-    h1 {
         text-align: center;
-        color: #00ffff;
     }
+
+    /* Titel */
+    h1 {
+        margin-bottom: 25px;
+        color: #00ffff;
+        font-size: 1.8rem;
+    }
+
+    /* Input-Felder */
     input[type="text"] {
         width: 100%;
-        padding: 12px;
-        margin: 8px 0;
+        padding: 12px 15px;
+        margin: 10px 0;
         border: none;
-        border-radius: 6px;
+        border-radius: 8px;
         background: #222;
         color: #fff;
         font-size: 16px;
     }
+
+    /* Radio Buttons */
     .radio-group {
-        margin: 10px 0;
+        margin: 20px 0;
+        display: flex;
+        justify-content: center;
+        gap: 40px;
     }
     .radio-group label {
-        margin-right: 20px;
         font-size: 16px;
         cursor: pointer;
     }
+    .radio-group input[type="radio"] {
+        margin-right: 8px;
+        accent-color: #00ffff; /* moderne Farbe für Radio */
+    }
+
+    /* Button */
     button {
         width: 100%;
         padding: 14px;
-        margin-top: 10px;
+        margin-top: 15px;
         background: #00ffff;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         color: #111;
         font-weight: bold;
-        cursor: pointer;
         font-size: 18px;
-        transition: 0.3s;
+        cursor: pointer;
+        transition: background 0.3s;
     }
     button:hover {
         background: #00cccc;
     }
+
+    /* Success Message */
     .success {
-        text-align: center;
         color: #00ff88;
-        margin-bottom: 10px;
         font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    /* Responsive Anpassung */
+    @media (max-width: 500px) {
+        .container {
+            padding: 30px 20px;
+        }
+        .radio-group {
+            flex-direction: column;
+            gap: 15px;
+        }
     }
 </style>
 </head>
@@ -94,4 +127,5 @@
         <button type="submit">CHECK-IN</button>
     </form>
 </div>
-</b
+</body>
+</html>
