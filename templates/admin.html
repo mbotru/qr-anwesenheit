@@ -5,75 +5,70 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Login</title>
 <style>
-body {
-    font-family: 'Roboto', sans-serif;
-    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-    color:#fff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:100vh;
-}
-
-.container {
-    background: rgba(0,255,255,0.05);
-    padding:2rem;
-    border-radius:16px;
-    width:300px;
-    text-align:center;
-    box-shadow:0 0 30px rgba(0,255,255,0.4);
-    backdrop-filter: blur(10px);
-}
-
-input { 
-    width:100%; 
-    padding:12px; 
-    margin:10px 0; 
-    border-radius:8px; 
-    border:none; 
-    background:#111;
-    color:#fff;
-}
-
-input::placeholder {
-    color:#888;
-}
-
-button {
-    width:100%;
-    padding:14px;
-    background:#00f0ff;
-    border:none;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-    color:#000;
-    transition: all 0.3s ease;
-}
-
-button:hover {
-    background:#00c8cc;
-}
-
-.error {
-    color:#ff4444;
-    margin-bottom:10px;
-}
-
-@media (max-width:480px){
-    .container { width:90%; padding:1.5rem;}
-    button { padding:12px;}
-}
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', sans-serif;
+        background: #0a0a0a;
+        color: #f0f0f0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+    .container {
+        background: #111;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 0 20px #ff00ff44;
+        max-width: 350px;
+        width: 90%;
+    }
+    h1 {
+        text-align: center;
+        color: #ff00ff;
+    }
+    input[type="text"], input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 6px;
+        background: #222;
+        color: #fff;
+    }
+    button {
+        width: 100%;
+        padding: 12px;
+        background: #ff00ff;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 16px;
+        transition: 0.3s;
+    }
+    button:hover {
+        background: #cc00cc;
+    }
+    .error {
+        color: #ff4444;
+        text-align: center;
+        margin-bottom: 10px;
+    }
 </style>
 </head>
 <body>
 <div class="container">
-<h2>Admin Login</h2>
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post">
-    <input type="password" name="password" placeholder="Passwort" required>
-    <button type="submit">Login</button>
-</form>
+    <h1>Admin Login</h1>
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+        <input type="text" name="username" placeholder="Benutzername" required>
+        <input type="password" name="password" placeholder="Passwort" required>
+        <button type="submit">Login</button>
+    </form>
 </div>
 </body>
 </html>
