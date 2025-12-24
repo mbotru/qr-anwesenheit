@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login</title>
+<style>
+body { font-family: 'Roboto', sans-serif; background:#0d0d0d; color:#fff; display:flex; align-items:center; justify-content:center; min-height:100vh;}
+.container { background:#1a1a1a; padding:2rem; border-radius:12px; width:300px; text-align:center;}
+input { width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none;}
+button { width:100%; padding:12px; background:#00f0ff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; color:#000;}
+.error { color:#ff4444; }
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Admin Login</h2>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post">
+    <input type="text" name="username" placeholder="Benutzername" required>
+    <input type="password" name="password" placeholder="Passwort" required>
+    <button type="submit">Login</button>
+</form>
+</div>
+</body>
+</html>
