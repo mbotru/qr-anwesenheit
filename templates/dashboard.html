@@ -3,42 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Filter</title>
+    <title>Admin Dashboard</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; padding: 20px; }
-        .container { background: #111; padding: 30px; border-radius: 16px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); max-width: 1100px; width: 100%; margin: auto; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; justify-content: center; padding: 20px; }
+        .container { background: #111; padding: 30px; border-radius: 16px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); max-width: 1100px; width: 100%; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 15px; }
         h1 { color: #00ffff; }
-        .logout { color: #ff4444; text-decoration: none; border: 1px solid #ff4444; padding: 5px 15px; border-radius: 8px; }
+        .logout-btn { color: #ff4444; text-decoration: none; border: 1px solid #ff4444; padding: 5px 15px; border-radius: 8px; font-size: 14px; }
+        .logout-btn:hover { background: #ff4444; color: white; }
         
         /* Filter Bereich */
-        .filter-area { background: #1a1a1a; padding: 20px; border-radius: 12px; margin-bottom: 25px; }
-        .filter-form { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
-        .input-group { display: flex; flex-direction: column; gap: 5px; }
-        input { padding: 10px; border-radius: 6px; border: 1px solid #333; background: #222; color: white; }
+        .filter-area { background: #1a1a1a; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
+        .filter-form { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 14px; color: #aaa; }
+        input { padding: 10px; border-radius: 6px; border: 1px solid #333; background: #222; color: white; font-size: 15px; }
         
-        .btn { padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; text-decoration: none; display: inline-block; }
-        .btn-filter { background: #333; color: white; }
-        .btn-export { background: #00ffff; color: #111; }
-        .btn-reset { background: #444; color: white; font-size: 12px; }
+        .btn { padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; text-decoration: none; display: inline-block; font-size: 14px; transition: 0.2s; }
+        .btn-filter { background: #00ffff; color: #111; }
+        .btn-filter:hover { background: #00cccc; }
+        .btn-export { background: #222; color: #00ffff; border: 1px solid #00ffff; }
+        .btn-export:hover { background: #00ffff; color: #111; }
+        .btn-reset { color: #888; text-decoration: none; font-size: 13px; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { text-align: left; color: #00ffff; padding: 15px 10px; border-bottom: 2px solid #222; }
         td { padding: 15px 10px; border-bottom: 1px solid #222; }
-        .btn-delete { color: #ff4444; text-decoration: none; border: 1px solid #ff4444; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .btn-delete { color: #ff4444; text-decoration: none; border: 1px solid #ff4444; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+        .btn-delete:hover { background: #ff4444; color: white; }
+        
+        @media (max-width: 768px) {
+            .filter-form { flex-direction: column; align-items: stretch; }
+            table { font-size: 12px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Anwesenheits-Dashboard</h1>
-            <a href="/logout" class="logout">Abmelden</a>
+            <h1>Anwesenheits-Liste</h1>
+            <a href="/logout" class="logout-btn">Abmelden</a>
         </div>
 
         <div class="filter-area">
             <form action="/dashboard" method="GET" class="filter-form">
-                <div class="input-group">
+                <div class="input-group" style="flex: 1; min-width: 200px;">
                     <label>Mitarbeiter Name:</label>
                     <input type="text" name="search" value="{{ search }}" placeholder="Vor- oder Nachname...">
                 </div>
@@ -46,10 +56,13 @@
                     <label>Datum:</label>
                     <input type="date" name="date" value="{{ date }}">
                 </div>
-                <button type="submit" class="btn btn-filter">Filtern</button>
-                <a href="/dashboard" class="btn btn-reset">Filter löschen</a>
-                
-                <a href="{{ url_for('export_csv', search=search, date=date) }}" class="btn btn-export">Gefilterte Liste Exportieren</a>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="submit" class="btn btn-filter">Filtern</button>
+                    <a href="/dashboard" class="btn-reset">Zurücksetzen</a>
+                </div>
+                <div style="margin-left: auto;">
+                    <a href="{{ url_for('export_csv', search=search, date=date) }}" class="btn btn-export">CSV Export</a>
+                </div>
             </form>
         </div>
 
@@ -59,7 +72,7 @@
                     <th>Vorname</th>
                     <th>Nachname</th>
                     <th>Büro nachholen</th>
-                    <th>Datum & Uhrzeit (GMT+1)</th>
+                    <th>Datum & Uhrzeit (Berlin)</th>
                     <th>Aktion</th>
                 </tr>
             </thead>
@@ -72,11 +85,13 @@
                     <td>{{ entry.datum.strftime('%d.%m.%Y %H:%M') }}</td>
                     <td>
                         <a href="{{ url_for('delete_entry', id=entry.id, search=search, date=date) }}" 
-                           class="btn-delete" onclick="return confirm('Löschen?')">Löschen</a>
+                           class="btn-delete" onclick="return confirm('Diesen Eintrag wirklich löschen?')">Löschen</a>
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="5" style="text-align: center; padding: 20px;">Keine Einträge gefunden.</td></tr>
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 30px; color: #666;">Keine Einträge für diese Filterung gefunden.</td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
