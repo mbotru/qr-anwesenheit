@@ -44,7 +44,7 @@ class CheckIn(db.Model):
 
 # --- ADMIN LOGIN (Passwort: deinpasswort) ---
 ADMIN_BENUTZER = 'admin'
-ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
+ADMIN_PASSWORT_HASH = generate_password_hash('cwAXaAViCSdafFbyz')
 
 with app.app_context():
     db.create_all()
