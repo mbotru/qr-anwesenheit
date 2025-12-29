@@ -10,11 +10,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# --- ZEITZONEN KONFIGURATION (Berlin) ---
+# --- ZEITZONEN KONFIGURATION ---
 BERLIN_TZ = pytz.timezone('Europe/Berlin')
 
 # --- KONFIGURATION ---
-app.secret_key = os.environ.get('SECRET_KEY', 'geheim-123-fest-in-render-eintragen')
+# WICHTIG: Setze 'SECRET_KEY' in den Render Environment Variables!
+app.secret_key = os.environ.get('SECRET_KEY', 'festgelegter-geheim-key-2024')
 
 app.config.update(
     SESSION_COOKIE_SECURE=True,
@@ -23,6 +24,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2)
 )
 
+# Datenbank-Anbindung
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -40,26 +42,44 @@ class CheckIn(db.Model):
     buerotag_nachholen = db.Column(db.String(20), nullable=False)
     datum = db.Column(db.DateTime)
 
-# --- ADMIN KONFIGURATION ---
+# --- ADMIN LOGIN DATEN ---
 ADMIN_BENUTZER = 'admin'
-ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort') # Login: admin / deinpasswort
+# Passwort ist 'deinpasswort'. Hash generiert zur Sicherheit.
+ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
 
 with app.app_context():
     db.create_all()
 
+# --- HILFSFUNKTIONEN ---
 def prevent_cache(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
 
+def get_filtered_query(search_query, date_filter):
+    """Zentralisierte Filter-Logik für Dashboard und Export"""
+    query = CheckIn.query
+    if search_query:
+        # Ermöglicht die Suche nach "Vorname Nachname" kombiniert
+        combined_name = func.concat(CheckIn.vorname, ' ', CheckIn.nachname)
+        query = query.filter(or_(
+            CheckIn.vorname.ilike(f'%{search_query}%'),
+            CheckIn.nachname.ilike(f'%{search_query}%'),
+            combined_name.ilike(f'%{search_query}%')
+        ))
+    if date_filter:
+        query = query.filter(func.date(CheckIn.datum) == date_filter)
+    return query
+
 # --- ROUTEN ---
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # ZEIT JETZT IN BERLIN BERECHNEN
+        # Harte Fixierung auf Berlin-Zeit (GMT+1/GMT+2)
         jetzt_berlin = datetime.now(BERLIN_TZ).replace(tzinfo=None)
+        
         neuer_eintrag = CheckIn(
             vorname=request.form.get('vorname'),
             nachname=request.form.get('nachname'),
@@ -75,6 +95,7 @@ def index():
 def admin():
     if session.get('logged_in') is True:
         return redirect(url_for('dashboard'))
+    
     error = None
     if request.method == 'POST':
         username = request.form.get('username')
@@ -84,8 +105,7 @@ def admin():
             session.permanent = True
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
-        else:
-            error = 'Ungültige Zugangsdaten.'
+        error = 'Ungültige Zugangsdaten.'
     return render_template('admin.html', error=error)
 
 @app.route('/dashboard')
@@ -93,20 +113,11 @@ def dashboard():
     if session.get('logged_in') is not True:
         return redirect(url_for('admin'))
     
-    # Filter-Parameter aus URL (GET)
     search_query = request.args.get('search', '').strip()
     date_filter = request.args.get('date', '')
 
-    query = CheckIn.query
-    if search_query:
-        # Filtert Vorname ODER Nachname (case-insensitive)
-        query = query.filter(or_(
-            CheckIn.vorname.ilike(f'%{search_query}%'),
-            CheckIn.nachname.ilike(f'%{search_query}%')
-        ))
-    if date_filter:
-        query = query.filter(func.date(CheckIn.datum) == date_filter)
-
+    # Filter anwenden
+    query = get_filtered_query(search_query, date_filter)
     alle_checkins = query.order_by(CheckIn.datum.desc()).all()
     
     response = make_response(render_template(
@@ -125,18 +136,20 @@ def export_csv():
     search_query = request.args.get('search', '').strip()
     date_filter = request.args.get('date', '')
 
-    query = CheckIn.query
-    if search_query:
-        query = query.filter(or_(CheckIn.vorname.ilike(f'%{search_query}%'), CheckIn.nachname.ilike(f'%{search_query}%')))
-    if date_filter:
-        query = query.filter(func.date(CheckIn.datum) == date_filter)
-
+    query = get_filtered_query(search_query, date_filter)
     eintraege = query.all()
+
     si = io.StringIO()
-    cw = csv.writer(si, delimiter=';')
+    cw = csv.writer(si, delimiter=';') # Semikolon für deutsches Excel
     cw.writerow(['Vorname', 'Nachname', 'Bürotag nachholen', 'Datum (Berlin)'])
+    
     for row in eintraege:
-        cw.writerow([row.vorname, row.nachname, row.buerotag_nachholen, row.datum.strftime('%d.%m.%Y %H:%M')])
+        cw.writerow([
+            row.vorname, 
+            row.nachname, 
+            row.buerotag_nachholen, 
+            row.datum.strftime('%d.%m.%Y %H:%M')
+        ])
 
     output = io.BytesIO()
     output.write(si.getvalue().encode('utf-8'))
@@ -152,7 +165,7 @@ def delete_entry(id):
     db.session.delete(entry)
     db.session.commit()
     
-    # Filter beim Redirect beibehalten
+    # Filter beibehalten nach dem Löschen
     return redirect(url_for('dashboard', search=request.args.get('search'), date=request.args.get('date')))
 
 @app.route('/logout')
