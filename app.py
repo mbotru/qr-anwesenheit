@@ -1,7 +1,7 @@
 import io
 import csv
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
@@ -9,9 +9,17 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# --- KONFIGURATION ---
-# SECRET_KEY wird aus Render-Umgebungsvariablen geladen
-app.secret_key = os.environ.get('SECRET_KEY', 'default-sicherheits-key-123')
+# --- KONFIGURATION FÜR STABILE SESSIONS (BEHEBT FALL A) ---
+# WICHTIG: Setze 'SECRET_KEY' in den Render Environment Variables!
+app.secret_key = os.environ.get('SECRET_KEY', 'ein-sehr-langer-geheimer-fallback-schlüssel')
+
+# Cookie-Einstellungen für HTTPS (Render Standard)
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=2)
+)
 
 # Datenbank-URL (Postgres für Render, SQLite für Lokal)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
@@ -31,16 +39,16 @@ class CheckIn(db.Model):
     buerotag_nachholen = db.Column(db.String(20), nullable=False)
     datum = db.Column(db.DateTime, default=datetime.utcnow)
 
-# --- ADMIN LOGIN ---
+# --- ADMIN LOGIN DATEN ---
 ADMIN_BENUTZER = 'admin'
-# HINWEIS: Ersetze 'deinpasswort' durch dein Wunschpasswort
+# Generiere deinen Hash lokal mit: generate_password_hash('deinpasswort')
+# Dies ist der Hash für 'deinpasswort' (bitte später anpassen)
 ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
 
 with app.app_context():
     db.create_all()
 
-# --- HILFSFUNKTION: CACHE DEAKTIVIEREN ---
-# Dies verhindert, dass man nach dem Logout per "Zurück"-Button das Dashboard sieht
+# --- HILFSFUNKTION: CACHE-SCHUTZ ---
 def prevent_cache(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -64,6 +72,7 @@ def index():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
+    # Wenn bereits eingeloggt, direkt zum Dashboard
     if session.get('logged_in'):
         return redirect(url_for('dashboard'))
         
@@ -73,23 +82,24 @@ def admin():
         password = request.form.get('password')
 
         if username == ADMIN_BENUTZER and check_password_hash(ADMIN_PASSWORT_HASH, password):
-            session.clear() # Alte Sessions löschen
+            session.clear()
+            session.permanent = True  # Macht die Sitzung stabil
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
         else:
-            error = 'Zugangsdaten falsch.'
+            error = 'Ungültige Zugangsdaten.'
     
     return render_template('admin.html', error=error)
 
 @app.route('/dashboard')
 def dashboard():
-    # Strengere Prüfung
+    # Strengere Prüfung der Session
     if 'logged_in' not in session or session['logged_in'] is not True:
         return redirect(url_for('admin'))
     
     alle_checkins = CheckIn.query.order_by(CheckIn.datum.desc()).all()
     
-    # Antwort mit Cache-Schutz erstellen
+    # Seite mit Cache-Schutz ausliefern
     response = make_response(render_template('dashboard.html', checkins=alle_checkins))
     return prevent_cache(response)
 
@@ -108,12 +118,14 @@ def export_csv():
     cw = csv.writer(si)
     cw.writerow(['Vorname', 'Nachname', 'Bürotag nachholen', 'Datum'])
     for row in eintraege:
-        cw.writerow([row.vorname, row.nachname, row.buerotag_nachholen, row.datum])
+        cw.writerow([row.vorname, row.nachname, row.buerotag_nachholen, row.datum.strftime('%Y-%m-%d %H:%M:%S')])
 
     output = io.BytesIO()
     output.write(si.getvalue().encode('utf-8'))
     output.seek(0)
-    return send_file(output, mimetype='text/csv', download_name='export.csv', as_attachment=True)
+    
+    filename = f"checkins_{filter_date if filter_date else 'alle'}.csv"
+    return send_file(output, mimetype='text/csv', download_name=filename, as_attachment=True)
 
 @app.route('/admin/delete/<int:id>')
 def delete_entry(id):
