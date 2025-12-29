@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Terminal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        #qrcode { background: white; padding: 25px; border-radius: 15px; margin: 30px; }
+        h1 { font-size: 2.5rem; color: #00ffff; }
+        .info { font-size: 1.2rem; opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <h1>Büro Check-In</h1>
+    <p class="info">Bitte mit dem Smartphone scannen</p>
+    <div id="qrcode"></div>
+    <p id="status">Code ist gültig...</p>
+
+    <script>
+        const qrcode = new QRCode(document.getElementById("qrcode"), { width: 400, height: 400 });
+        let lastToken = "";
+
+        async function updateQR() {
+            try {
+                const res = await fetch('/get_qr_token');
+                const data = await res.json();
+                if (data.token !== lastToken) {
+                    lastToken = data.token;
+                    const url = `${window.location.origin}/?token=${data.token}`;
+                    qrcode.clear();
+                    qrcode.makeCode(url);
+                }
+            } catch (e) { console.error("Update failed"); }
+        }
+
+        setInterval(updateQR, 5000); // Prüft alle 5 Sek auf neuen Token
+        updateQR();
+    </script>
+</body>
+</html>
