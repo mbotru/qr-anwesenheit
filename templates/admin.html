@@ -1,135 +1,30 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
-<style>
-    /* Basis & Body */
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-    body, html {
-        font-family: 'Segoe UI', sans-serif;
-        background: linear-gradient(135deg, #0a0a0a, #111111);
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        padding: 30px 10px;
-    }
-
-    /* Container */
-    .container {
-        background: #111;
-        padding: 30px;
-        border-radius: 16px;
-        box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
-        max-width: 800px;
-        width: 100%;
-        color: #fff;
-    }
-
-    h1 {
-        color: #00ffff;
-        text-align: center;
-        margin-bottom: 25px;
-        font-size: 1.8rem;
-    }
-
-    /* Form */
-    form {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        justify-content: center;
-        margin-bottom: 20px;
-    }
-    input[type="date"], input[type="submit"] {
-        padding: 10px 12px;
-        border-radius: 8px;
-        border: none;
-        font-size: 16px;
-    }
-    input[type="date"] {
-        background: #222;
-        color: #fff;
-    }
-    input[type="submit"] {
-        background: #00ffff;
-        color: #111;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.3s;
-    }
-    input[type="submit"]:hover {
-        background: #00cccc;
-    }
-
-    /* Tabelle */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-        text-align: left;
-    }
-    th, td {
-        padding: 12px 10px;
-        border-bottom: 1px solid #222;
-    }
-    th {
-        background-color: #111;
-        color: #00ffff;
-        font-weight: bold;
-    }
-    td {
-        color: #fff;
-    }
-
-    /* Responsive Anpassung */
-    @media (max-width: 600px) {
-        form {
-            flex-direction: column;
-        }
-        table th, table td {
-            padding: 10px 5px;
-            font-size: 14px;
-        }
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: #111; padding: 40px; border-radius: 16px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.3); width: 100%; max-width: 400px; text-align: center; }
+        h1 { color: #00ffff; margin-bottom: 25px; font-size: 1.8rem; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
+        input[type="submit"] { background: #00ffff; color: #111; font-weight: bold; cursor: pointer; border: none; transition: background 0.3s; margin-top: 20px; }
+        input[type="submit"]:hover { background: #00cccc; }
+        .error { color: #ff4444; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ff4444; }
+    </style>
 </head>
 <body>
-<div class="container">
-    <h1>Admin Dashboard</h1>
-
-    <!-- Filter / Export -->
-    <form method="GET" action="/admin/export/csv">
-        <input type="date" name="date" required>
-        <input type="submit" value="CSV Export">
-    </form>
-
-    <!-- Check-ins Tabelle -->
-    <table>
-        <thead>
-            <tr>
-                <th>Vorname</th>
-                <th>Nachname</th>
-                <th>Bürotag nachholen</th>
-                <th>Datum</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for entry in entries %}
-            <tr>
-                <td>{{ entry.vorname }}</td>
-                <td>{{ entry.nachname }}</td>
-                <td>{{ entry.buerotag_nachholen }}</td>
-                <td>{{ entry.date }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <div class="login-box">
+        <h1>Admin Login</h1>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <input type="text" name="username" placeholder="Benutzername" required>
+            <input type="password" name="password" placeholder="Passwort" required>
+            <input type="submit" value="Einloggen">
+        </form>
+    </div>
 </body>
 </html>
