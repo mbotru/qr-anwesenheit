@@ -1,69 +1,75 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
-<style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body, html { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #0a0a0a, #111111); min-height: 100vh; display: flex; justify-content: center; padding: 30px 10px; }
-    .container { background: #111; padding: 30px; border-radius: 16px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.3); max-width: 900px; width: 100%; color: #fff; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 15px; }
-    h1 { color: #00ffff; font-size: 1.8rem; }
-    .logout-btn { color: #ff4444; text-decoration: none; border: 1px solid #ff4444; padding: 5px 12px; border-radius: 8px; font-size: 14px; transition: 0.3s; }
-    .logout-btn:hover { background: #ff4444; color: white; }
-    
-    form { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 20px; }
-    input[type="date"], input[type="submit"] { padding: 10px 12px; border-radius: 8px; border: none; font-size: 16px; }
-    input[type="date"] { background: #222; color: #fff; border: 1px solid #333; }
-    input[type="submit"] { background: #00ffff; color: #111; font-weight: bold; cursor: pointer; transition: 0.3s; }
-    input[type="submit"]:hover { background: #00cccc; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; }
-    th, td { padding: 12px 10px; border-bottom: 1px solid #222; }
-    th { background-color: #111; color: #00ffff; font-weight: bold; }
-    .btn-delete { color: #ff4444; text-decoration: none; font-size: 12px; padding: 4px 8px; border: 1px solid #ff4444; border-radius: 4px; }
-    .btn-delete:hover { background: #ff4444; color: white; }
-
-    @media (max-width: 600px) { form { flex-direction: column; } table { font-size: 12px; } }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; justify-content: center; padding: 20px; }
+        .container { background: #111; padding: 30px; border-radius: 16px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); max-width: 1000px; width: 100%; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+        h1 { color: #00ffff; }
+        .logout-link { color: #ff4444; text-decoration: none; border: 1px solid #ff4444; padding: 5px 15px; border-radius: 8px; font-size: 14px; }
+        .logout-link:hover { background: #ff4444; color: white; }
+        
+        .controls { display: flex; flex-wrap: wrap; gap: 15px; background: #1a1a1a; padding: 20px; border-radius: 12px; margin-bottom: 30px; }
+        input[type="date"] { padding: 10px; border-radius: 6px; border: 1px solid #333; background: #222; color: white; }
+        .btn-export { background: #00ffff; color: #111; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; color: #00ffff; padding: 15px 10px; border-bottom: 2px solid #222; }
+        td { padding: 15px 10px; border-bottom: 1px solid #222; }
+        .btn-delete { color: #ff4444; text-decoration: none; border: 1px solid #ff4444; padding: 4px 10px; border-radius: 6px; font-size: 13px; transition: 0.3s; }
+        .btn-delete:hover { background: #ff4444; color: white; }
+        
+        @media (max-width: 768px) {
+            table { font-size: 12px; }
+            .controls { flex-direction: column; }
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <h1>Dashboard</h1>
-        <a href="/logout" class="logout-btn">Abmelden</a>
+    <div class="container">
+        <div class="header">
+            <h1>Anwesenheits-Liste</h1>
+            <a href="/logout" class="logout-link">Abmelden</a>
+        </div>
+
+        <div class="controls">
+            <form action="/admin/export/csv" method="GET" style="display: flex; gap: 15px; align-items: center; width: 100%;">
+                <label>Nach Datum filtern (optional):</label>
+                <input type="date" name="date">
+                <input type="submit" value="Als CSV exportieren" class="btn-export">
+            </form>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Vorname</th>
+                    <th>Nachname</th>
+                    <th>Bürotag nachholen</th>
+                    <th>Datum & Uhrzeit</th>
+                    <th>Aktion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in checkins %}
+                <tr>
+                    <td>{{ entry.vorname }}</td>
+                    <td>{{ entry.nachname }}</td>
+                    <td>{{ entry.buerotag_nachholen }}</td>
+                    <td>{{ entry.datum.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('delete_entry', id=entry.id) }}" 
+                           class="btn-delete" 
+                           onclick="return confirm('Eintrag wirklich löschen?')">Löschen</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-
-    <form method="GET" action="/admin/export/csv">
-        <input type="date" name="date">
-        <input type="submit" value="CSV Export (Filter/Alle)">
-    </form>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Vorname</th>
-                <th>Nachname</th>
-                <th>Büro nachholen</th>
-                <th>Datum</th>
-                <th>Aktion</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for entry in checkins %}
-            <tr>
-                <td>{{ entry.vorname }}</td>
-                <td>{{ entry.nachname }}</td>
-                <td>{{ entry.buerotag_nachholen }}</td>
-                <td>{{ entry.datum.strftime('%d.%m.%Y %H:%M') }}</td>
-                <td>
-                    <a href="{{ url_for('delete_entry', id=entry.id) }}" class="btn-delete" onclick="return confirm('Eintrag wirklich löschen?')">Löschen</a>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
 </body>
 </html>
