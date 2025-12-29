@@ -9,11 +9,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# --- KONFIGURATION FÜR STABILE SESSIONS (BEHEBT FALL A) ---
-# WICHTIG: Setze 'SECRET_KEY' in den Render Environment Variables!
-app.secret_key = os.environ.get('SECRET_KEY', 'ein-sehr-langer-geheimer-fallback-schlüssel')
+# --- KONFIGURATION (Render Environment Variables nutzen!) ---
+# WICHTIG: Erstelle auf Render eine Variable 'SECRET_KEY'
+app.secret_key = os.environ.get('SECRET_KEY', 'ein-sehr-langer-geheimer-schlüssel-123')
 
-# Cookie-Einstellungen für HTTPS (Render Standard)
+# Stabile Cookies für HTTPS auf Render
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
@@ -21,7 +21,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2)
 )
 
-# Datenbank-URL (Postgres für Render, SQLite für Lokal)
+# Datenbank-Anbindung (Postgres für Render / SQLite für Lokal)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -39,10 +39,9 @@ class CheckIn(db.Model):
     buerotag_nachholen = db.Column(db.String(20), nullable=False)
     datum = db.Column(db.DateTime, default=datetime.utcnow)
 
-# --- ADMIN LOGIN DATEN ---
+# --- ADMIN KONFIGURATION ---
 ADMIN_BENUTZER = 'admin'
-# Generiere deinen Hash lokal mit: generate_password_hash('deinpasswort')
-# Dies ist der Hash für 'deinpasswort' (bitte später anpassen)
+# Das Passwort ist 'deinpasswort' - Falls du es änderst, nutze einen neuen Hash!
 ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
 
 with app.app_context():
@@ -57,6 +56,7 @@ def prevent_cache(response):
 
 # --- ROUTEN ---
 
+# Startseite: Check-In Formular
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -70,10 +70,11 @@ def index():
         return render_template('index.html', success=True)
     return render_template('index.html')
 
+# Admin Login (Punkt 1 Korrektur)
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    # Wenn bereits eingeloggt, direkt zum Dashboard
-    if session.get('logged_in'):
+    # Nur wenn explizit eingeloggt, zum Dashboard weiterleiten
+    if session.get('logged_in') is True:
         return redirect(url_for('dashboard'))
         
     error = None
@@ -81,9 +82,10 @@ def admin():
         username = request.form.get('username')
         password = request.form.get('password')
 
+        # Passwort-Abgleich
         if username == ADMIN_BENUTZER and check_password_hash(ADMIN_PASSWORT_HASH, password):
-            session.clear()
-            session.permanent = True  # Macht die Sitzung stabil
+            session.clear() # Alte Daten bereinigen
+            session.permanent = True
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
         else:
@@ -91,21 +93,23 @@ def admin():
     
     return render_template('admin.html', error=error)
 
+# Admin Dashboard (Punkt 2 Korrektur)
 @app.route('/dashboard')
 def dashboard():
-    # Strengere Prüfung der Session
-    if 'logged_in' not in session or session['logged_in'] is not True:
+    # Harter Check: Nur Zugriff wenn logged_in exakt True ist
+    if session.get('logged_in') is not True:
         return redirect(url_for('admin'))
     
     alle_checkins = CheckIn.query.order_by(CheckIn.datum.desc()).all()
     
-    # Seite mit Cache-Schutz ausliefern
+    # Seite mit Cache-Schutz ausliefern (verhindert "Zurück"-Button Trick)
     response = make_response(render_template('dashboard.html', checkins=alle_checkins))
     return prevent_cache(response)
 
+# CSV Export
 @app.route('/admin/export/csv')
 def export_csv():
-    if not session.get('logged_in'):
+    if session.get('logged_in') is not True:
         return redirect(url_for('admin'))
 
     filter_date = request.args.get('date')
@@ -123,19 +127,20 @@ def export_csv():
     output = io.BytesIO()
     output.write(si.getvalue().encode('utf-8'))
     output.seek(0)
-    
-    filename = f"checkins_{filter_date if filter_date else 'alle'}.csv"
-    return send_file(output, mimetype='text/csv', download_name=filename, as_attachment=True)
+    return send_file(output, mimetype='text/csv', download_name='checkins_export.csv', as_attachment=True)
 
+# Löschen von Einträgen
 @app.route('/admin/delete/<int:id>')
 def delete_entry(id):
-    if not session.get('logged_in'):
+    if session.get('logged_in') is not True:
         return redirect(url_for('admin'))
+    
     entry = CheckIn.query.get_or_404(id)
     db.session.delete(entry)
     db.session.commit()
     return redirect(url_for('dashboard'))
 
+# Logout
 @app.route('/logout')
 def logout():
     session.clear()
