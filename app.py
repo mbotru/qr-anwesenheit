@@ -9,11 +9,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# --- KONFIGURATION (Render Environment Variables nutzen!) ---
+# --- KONFIGURATION ---
 # WICHTIG: Erstelle auf Render eine Variable 'SECRET_KEY'
-app.secret_key = os.environ.get('SECRET_KEY', 'ein-sehr-langer-geheimer-schlüssel-123')
+app.secret_key = os.environ.get('SECRET_KEY', 'geheimnis-123-fest-in-render-eintragen')
 
-# Stabile Cookies für HTTPS auf Render
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
@@ -21,7 +20,6 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2)
 )
 
-# Datenbank-Anbindung (Postgres für Render / SQLite für Lokal)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -41,8 +39,8 @@ class CheckIn(db.Model):
 
 # --- ADMIN KONFIGURATION ---
 ADMIN_BENUTZER = 'admin'
-# Das Passwort ist 'deinpasswort' - Falls du es änderst, nutze einen neuen Hash!
-ADMIN_PASSWORT_HASH = generate_password_hash('cwAXaAViCSdafFbyz')
+# Passwort ist 'deinpasswort'
+ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
 
 with app.app_context():
     db.create_all()
@@ -56,7 +54,6 @@ def prevent_cache(response):
 
 # --- ROUTEN ---
 
-# Startseite: Check-In Formular
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -70,10 +67,8 @@ def index():
         return render_template('index.html', success=True)
     return render_template('index.html')
 
-# Admin Login (Punkt 1 Korrektur)
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    # Nur wenn explizit eingeloggt, zum Dashboard weiterleiten
     if session.get('logged_in') is True:
         return redirect(url_for('dashboard'))
         
@@ -82,9 +77,8 @@ def admin():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Passwort-Abgleich
         if username == ADMIN_BENUTZER and check_password_hash(ADMIN_PASSWORT_HASH, password):
-            session.clear() # Alte Daten bereinigen
+            session.clear()
             session.permanent = True
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
@@ -93,20 +87,15 @@ def admin():
     
     return render_template('admin.html', error=error)
 
-# Admin Dashboard (Punkt 2 Korrektur)
 @app.route('/dashboard')
 def dashboard():
-    # Harter Check: Nur Zugriff wenn logged_in exakt True ist
     if session.get('logged_in') is not True:
         return redirect(url_for('admin'))
     
     alle_checkins = CheckIn.query.order_by(CheckIn.datum.desc()).all()
-    
-    # Seite mit Cache-Schutz ausliefern (verhindert "Zurück"-Button Trick)
     response = make_response(render_template('dashboard.html', checkins=alle_checkins))
     return prevent_cache(response)
 
-# CSV Export
 @app.route('/admin/export/csv')
 def export_csv():
     if session.get('logged_in') is not True:
@@ -119,17 +108,23 @@ def export_csv():
 
     eintraege = query.all()
     si = io.StringIO()
-    cw = csv.writer(si)
+    # Semikolon für deutsches Excel optimiert
+    cw = csv.writer(si, delimiter=';')
     cw.writerow(['Vorname', 'Nachname', 'Bürotag nachholen', 'Datum'])
+    
     for row in eintraege:
-        cw.writerow([row.vorname, row.nachname, row.buerotag_nachholen, row.datum.strftime('%Y-%m-%d %H:%M:%S')])
+        cw.writerow([
+            row.vorname, 
+            row.nachname, 
+            row.buerotag_nachholen, 
+            row.datum.strftime('%d.%m.%Y %H:%M')
+        ])
 
     output = io.BytesIO()
     output.write(si.getvalue().encode('utf-8'))
     output.seek(0)
     return send_file(output, mimetype='text/csv', download_name='checkins_export.csv', as_attachment=True)
 
-# Löschen von Einträgen
 @app.route('/admin/delete/<int:id>')
 def delete_entry(id):
     if session.get('logged_in') is not True:
@@ -140,7 +135,6 @@ def delete_entry(id):
     db.session.commit()
     return redirect(url_for('dashboard'))
 
-# Logout
 @app.route('/logout')
 def logout():
     session.clear()
@@ -148,4 +142,4 @@ def logout():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port)
