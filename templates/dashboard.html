@@ -1,82 +1,61 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
 <style>
-    body {
-        margin: 0;
-        font-family: 'Segoe UI', sans-serif;
-        background: #0a0a0a;
-        color: #f0f0f0;
-    }
-    header {
-        background: #111;
-        padding: 15px;
-        text-align: center;
-        color: #00ffcc;
-        font-size: 24px;
-    }
-    .container {
-        padding: 20px;
-        max-width: 1000px;
-        margin: auto;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-    th, td {
-        padding: 12px;
-        border: 1px solid #222;
-        text-align: center;
-    }
-    th {
-        background: #222;
-        color: #00ffcc;
-    }
-    tr:nth-child(even) {
-        background: #111;
-    }
-    a.button {
-        display: inline-block;
-        padding: 10px 20px;
-        background: #00ffcc;
-        color: #000;
+    /* Ergänzung für den Lösch-Button */
+    .btn-delete {
+        background: #ff4444;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
         text-decoration: none;
-        border-radius: 6px;
-        font-weight: bold;
-        margin-bottom: 10px;
-        transition: 0.3s;
+        font-size: 12px;
     }
-    a.button:hover {
-        background: #00d9b3;
+    .btn-delete:hover { background: #cc0000; }
+    
+    .header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
     }
+    .logout-link { color: #00ffff; text-decoration: none; font-size: 14px; }
 </style>
-</head>
-<body>
-<header>Admin Dashboard</header>
+
 <div class="container">
-    <a href="{{ url_for('export_csv') }}" class="button">CSV Export</a>
-    <a href="{{ url_for('logout') }}" class="button">Logout</a>
+    <div class="header-actions">
+        <h1>Admin Dashboard</h1>
+        <a href="/logout" class="logout-link">Abmelden</a>
+    </div>
+
+    <form method="GET" action="/admin/export/csv">
+        <input type="date" name="date">
+        <input type="submit" value="CSV Export (Alle)">
+    </form>
+
     <table>
-        <tr>
-            <th>Vorname</th>
-            <th>Nachname</th>
-            <th>Bürotag nachholen</th>
-            <th>Datum</th>
-        </tr>
-        {% for c in checkins %}
-        <tr>
-            <td>{{ c['Vorname'] }}</td>
-            <td>{{ c['Nachname'] }}</td>
-            <td>{{ c['Bürotag nachholen'] }}</td>
-            <td>{{ c['Datum'] }}</td>
-        </tr>
+        <thead>
+            <tr>
+                <th>Vorname</th>
+                <th>Nachname</th>
+                <th>Büro nachholen</th>
+                <th>Datum</th>
+                <th>Aktion</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for entry in checkins %}
+            <tr>
+                <td>{{ entry.vorname }}</td>
+                <td>{{ entry.nachname }}</td>
+                <td>{{ entry.buerotag_nachholen }}</td>
+                <td>{{ entry.datum.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>
+                    <a href="{{ url_for('delete_entry', id=entry.id) }}" 
+                       class="btn-delete" 
+                       onclick="return confirm('Eintrag wirklich löschen?')">Löschen</a>
+                </td>
+            </tr>
         {% endfor %}
+        </tbody>
     </table>
 </div>
-</body>
-</html>
