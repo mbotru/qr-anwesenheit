@@ -14,8 +14,7 @@ app = Flask(__name__)
 BERLIN_TZ = pytz.timezone('Europe/Berlin')
 
 # --- KONFIGURATION ---
-# WICHTIG: Setze 'SECRET_KEY' in den Render Environment Variables!
-app.secret_key = os.environ.get('SECRET_KEY', 'festgelegter-geheim-key-2024')
+app.secret_key = os.environ.get('SECRET_KEY', 'dein-sicherer-key-2024')
 
 app.config.update(
     SESSION_COOKIE_SECURE=True,
@@ -44,24 +43,30 @@ class CheckIn(db.Model):
 
 # --- ADMIN LOGIN DATEN ---
 ADMIN_BENUTZER = 'admin'
-# Passwort ist 'deinpasswort'. Hash generiert zur Sicherheit.
-ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
+ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort') # Login: admin / deinpasswort
 
 with app.app_context():
     db.create_all()
 
 # --- HILFSFUNKTIONEN ---
+
 def prevent_cache(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
 
+def is_mobile():
+    """Prüft, ob der Zugriff von einem mobilen Endgerät erfolgt"""
+    user_agent = request.headers.get('User-Agent', '').lower()
+    mobile_keywords = ['android', 'iphone', 'ipad', 'iemobile', 'kindle', 'mobile']
+    return any(keyword in user_agent for keyword in mobile_keywords)
+
 def get_filtered_query(search_query, date_filter):
     """Zentralisierte Filter-Logik für Dashboard und Export"""
     query = CheckIn.query
     if search_query:
-        # Ermöglicht die Suche nach "Vorname Nachname" kombiniert
+        # Kombinierte Suche für Vorname + Nachname
         combined_name = func.concat(CheckIn.vorname, ' ', CheckIn.nachname)
         query = query.filter(or_(
             CheckIn.vorname.ilike(f'%{search_query}%'),
@@ -76,8 +81,12 @@ def get_filtered_query(search_query, date_filter):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    # BLOCKIERUNG FÜR DESKTOP (Nur mobiles Frontend)
+    if not is_mobile():
+        return render_template('mobile_only.html'), 403
+
     if request.method == 'POST':
-        # Harte Fixierung auf Berlin-Zeit (GMT+1/GMT+2)
+        # GMT+1 Fixierung
         jetzt_berlin = datetime.now(BERLIN_TZ).replace(tzinfo=None)
         
         neuer_eintrag = CheckIn(
@@ -93,6 +102,7 @@ def index():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
+    # Admin-Bereich ist am Desktop erlaubt!
     if session.get('logged_in') is True:
         return redirect(url_for('dashboard'))
     
@@ -116,7 +126,6 @@ def dashboard():
     search_query = request.args.get('search', '').strip()
     date_filter = request.args.get('date', '')
 
-    # Filter anwenden
     query = get_filtered_query(search_query, date_filter)
     alle_checkins = query.order_by(CheckIn.datum.desc()).all()
     
@@ -140,7 +149,7 @@ def export_csv():
     eintraege = query.all()
 
     si = io.StringIO()
-    cw = csv.writer(si, delimiter=';') # Semikolon für deutsches Excel
+    cw = csv.writer(si, delimiter=';')
     cw.writerow(['Vorname', 'Nachname', 'Bürotag nachholen', 'Datum (Berlin)'])
     
     for row in eintraege:
@@ -154,7 +163,7 @@ def export_csv():
     output = io.BytesIO()
     output.write(si.getvalue().encode('utf-8'))
     output.seek(0)
-    return send_file(output, mimetype='text/csv', download_name='anwesenheit_export.csv', as_attachment=True)
+    return send_file(output, mimetype='text/csv', download_name='checkins_export.csv', as_attachment=True)
 
 @app.route('/admin/delete/<int:id>')
 def delete_entry(id):
@@ -165,7 +174,6 @@ def delete_entry(id):
     db.session.delete(entry)
     db.session.commit()
     
-    # Filter beibehalten nach dem Löschen
     return redirect(url_for('dashboard', search=request.args.get('search'), date=request.args.get('date')))
 
 @app.route('/logout')
