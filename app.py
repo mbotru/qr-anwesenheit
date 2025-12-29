@@ -2,7 +2,7 @@ import io
 import csv
 import os
 from datetime import datetime, timedelta
-import pytz
+import pytz # Stellt sicher, dass pytz in deiner requirements.txt steht!
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, or_
@@ -10,13 +10,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# --- KONFIGURATION ---
-app.secret_key = os.environ.get('SECRET_KEY', 'dein-geheimer-key-123')
+# --- ZEITZONEN KONFIGURATION (GMT+1 / Berlin) ---
 BERLIN_TZ = pytz.timezone('Europe/Berlin')
 
-def get_now_berlin():
-    return datetime.now(BERLIN_TZ)
-
+# --- ALLGEMEINE KONFIGURATION ---
+app.secret_key = os.environ.get('SECRET_KEY', 'ein-sehr-sicherer-key-456')
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
@@ -24,6 +22,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2)
 )
 
+# Datenbank (Postgres für Render / SQLite für Lokal)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -39,18 +38,20 @@ class CheckIn(db.Model):
     vorname = db.Column(db.String(100), nullable=False)
     nachname = db.Column(db.String(100), nullable=False)
     buerotag_nachholen = db.Column(db.String(20), nullable=False)
-    # Speichert die Zeit direkt in Berlin-Zeit
-    datum = db.Column(db.DateTime, default=get_now_berlin)
+    datum = db.Column(db.DateTime) # Wir setzen das Datum manuell beim Speichern
 
 # --- ADMIN KONFIGURATION ---
 ADMIN_BENUTZER = 'admin'
-ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
+ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort') # Login: admin / deinpasswort
 
 with app.app_context():
     db.create_all()
 
+# --- HILFSFUNKTIONEN ---
 def prevent_cache(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return response
 
 # --- ROUTEN ---
@@ -58,11 +59,14 @@ def prevent_cache(response):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
+        # ZEITFIX: Wir berechnen JETZT die Berliner Zeit und entfernen die Zeitzonen-Info für die DB
+        jetzt_berlin = datetime.now(BERLIN_TZ).replace(tzinfo=None)
+        
         neuer_eintrag = CheckIn(
             vorname=request.form.get('vorname'),
             nachname=request.form.get('nachname'),
             buerotag_nachholen=request.form.get('buerotag_nachholen', 'Nein'),
-            datum=get_now_berlin()
+            datum=jetzt_berlin
         )
         db.session.add(neuer_eintrag)
         db.session.commit()
@@ -71,7 +75,8 @@ def index():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    if session.get('logged_in') is True: return redirect(url_for('dashboard'))
+    if session.get('logged_in') is True:
+        return redirect(url_for('dashboard'))
     error = None
     if request.method == 'POST':
         if request.form.get('username') == ADMIN_BENUTZER and \
@@ -80,14 +85,15 @@ def admin():
             session.permanent = True
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
-        error = 'Ungültige Zugangsdaten.'
+        error = 'Zugangsdaten falsch.'
     return render_template('admin.html', error=error)
 
 @app.route('/dashboard')
 def dashboard():
-    if session.get('logged_in') is not True: return redirect(url_for('admin'))
+    if session.get('logged_in') is not True:
+        return redirect(url_for('admin'))
     
-    # Filter-Parameter aus der URL holen
+    # Filter-Logik
     search = request.args.get('search', '')
     date_filter = request.args.get('date', '')
 
@@ -103,8 +109,10 @@ def dashboard():
 
 @app.route('/admin/export/csv')
 def export_csv():
-    if session.get('logged_in') is not True: return redirect(url_for('admin'))
+    if session.get('logged_in') is not True:
+        return redirect(url_for('admin'))
 
+    # Filter für Export übernehmen
     search = request.args.get('search', '')
     date_filter = request.args.get('date', '')
 
@@ -117,7 +125,7 @@ def export_csv():
     eintraege = query.all()
     si = io.StringIO()
     cw = csv.writer(si, delimiter=';')
-    cw.writerow(['Vorname', 'Nachname', 'Bürotag nachholen', 'Datum (Berlin)'])
+    cw.writerow(['Vorname', 'Nachname', 'Bürotag nachholen', 'Datum (GMT+1)'])
     
     for row in eintraege:
         cw.writerow([row.vorname, row.nachname, row.buerotag_nachholen, row.datum.strftime('%d.%m.%Y %H:%M')])
@@ -129,10 +137,12 @@ def export_csv():
 
 @app.route('/admin/delete/<int:id>')
 def delete_entry(id):
-    if session.get('logged_in') is not True: return redirect(url_for('admin'))
+    if session.get('logged_in') is not True:
+        return redirect(url_for('admin'))
     entry = CheckIn.query.get_or_404(id)
     db.session.delete(entry)
     db.session.commit()
+    # Zurück zum Dashboard mit beibehaltenen Filtern
     return redirect(url_for('dashboard', search=request.args.get('search'), date=request.args.get('date')))
 
 @app.route('/logout')
@@ -141,4 +151,5 @@ def logout():
     return redirect(url_for('admin'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
