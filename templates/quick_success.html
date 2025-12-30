@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="3;url=/scanner">
+    <title>Check-In Erfolg</title>
+    <style>
+        body { 
+            background: #000; color: white; font-family: sans-serif; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; 
+        }
+        .icon { font-size: 80px; color: #00ffcc; margin-bottom: 20px; }
+        h1 { font-size: 2.5rem; }
+        .name { color: #00ffcc; font-size: 2rem; border-bottom: 2px solid #333; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="icon">✓</div>
+    <h1>Erfolgreich eingecheckt</h1>
+    <div class="name">{{ name }}</div>
+    <p>Das Terminal ist in 3 Sekunden wieder bereit.</p>
+</body>
+</html>
