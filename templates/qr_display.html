@@ -2,40 +2,105 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>QR Terminal</title>
+    <title>QR Terminal - Kiosk Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        #qrcode { background: white; padding: 25px; border-radius: 15px; margin: 30px; }
-        h1 { font-size: 2.5rem; color: #00ffff; }
-        .info { font-size: 1.2rem; opacity: 0.7; }
+        body { 
+            background: #000; 
+            color: white; 
+            font-family: 'Segoe UI', sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden; 
+        }
+        #qrcode { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 20px; 
+            margin: 30px; 
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+        }
+        h1 { font-size: 3rem; color: #00ffff; margin-bottom: 10px; }
+        .info { font-size: 1.5rem; opacity: 0.8; margin-bottom: 20px; }
+        
+        /* Start-Button für Vollbild */
+        #fullscreen-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: #00ffff;
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 100;
+        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <h1>Büro Check-In</h1>
-    <p class="info">Bitte mit dem Smartphone scannen</p>
-    <div id="qrcode"></div>
-    <p id="status">Code ist gültig...</p>
+    <button id="fullscreen-btn" onclick="startKiosk()">Terminal starten (Full Screen)</button>
+
+    <div id="content" class="hidden">
+        <h1>Check-In Terminal</h1>
+        <p class="info">Bitte QR-Code scannen</p>
+        <div id="qrcode"></div>
+        <p id="status" style="color: #444;">Code wird aktualisiert...</p>
+    </div>
 
     <script>
-        const qrcode = new QRCode(document.getElementById("qrcode"), { width: 400, height: 400 });
+        const qrcode = new QRCode(document.getElementById("qrcode"), { 
+            width: 450, 
+            height: 450,
+            correctLevel: QRCode.CorrectLevel.H 
+        });
+        
         let lastToken = "";
 
         async function updateQR() {
             try {
                 const res = await fetch('/get_qr_token');
                 const data = await res.json();
-                if (data.token !== lastToken) {
+                if (data.token && data.token !== lastToken) {
                     lastToken = data.token;
                     const url = `${window.location.origin}/?token=${data.token}`;
                     qrcode.clear();
                     qrcode.makeCode(url);
                 }
-            } catch (e) { console.error("Update failed"); }
+            } catch (e) { console.error("Update fehlgeschlagen"); }
         }
 
-        setInterval(updateQR, 5000); // Prüft alle 5 Sek auf neuen Token
-        updateQR();
+        function startKiosk() {
+            // Vollbild aktivieren
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
+
+            // Button verstecken, Inhalt zeigen
+            document.getElementById('fullscreen-btn').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+            
+            // Update starten
+            setInterval(updateQR, 10000);
+            updateQR();
+        }
+
+        // Automatisches Beenden des Vollbilds abfangen (optional)
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                document.getElementById('fullscreen-btn').classList.remove('hidden');
+                document.getElementById('content').classList.add('hidden');
+            }
+        });
     </script>
 </body>
 </html>
