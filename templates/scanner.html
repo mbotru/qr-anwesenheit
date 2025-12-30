@@ -2,65 +2,114 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>USB Scanner Terminal</title>
     <style>
         body { 
-            background: #0a0a0a; color: #00ffcc; font-family: 'Segoe UI', sans-serif; 
+            background: #0a0a0a; color: #00ffcc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;
         }
         .scanner-box {
-            border: 2px solid #333; padding: 40px; border-radius: 20px; background: #111; text-align: center;
-            box-shadow: 0 0 30px rgba(0, 255, 204, 0.1);
+            border: 2px solid #333; padding: 50px; border-radius: 30px; background: #111; text-align: center;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.1);
+            transition: all 0.3s ease;
         }
-        .icon { font-size: 80px; margin-bottom: 20px; display: block; }
-        /* Das Eingabefeld ist fast unsichtbar, muss aber den Fokus behalten */
+        .icon { font-size: 100px; margin-bottom: 20px; display: block; filter: drop-shadow(0 0 10px #00ffcc); }
+        
+        /* Das Eingabefeld bleibt im Fokus, ist aber für den Nutzer unsichtbar */
         #scan-input {
-            position: absolute; opacity: 0; top: 0; left: 0;
+            position: absolute; opacity: 0; pointer-events: none;
         }
+        
+        .status-container { margin-top: 20px; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
         .status-dot {
-            width: 15px; height: 15px; background: #00ffcc; border-radius: 50%; display: inline-block;
-            margin-right: 10px; animation: pulse 1.5s infinite;
+            width: 12px; height: 12px; background: #00ffcc; border-radius: 50%; 
+            margin-right: 15px; animation: pulse 1.5s infinite;
         }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+        
+        .error-log { color: #ff5555; margin-top: 20px; font-family: monospace; font-size: 0.9rem; }
     </style>
 </head>
 <body onclick="focusInput()">
-    <div class="scanner-box">
-        <span class="icon">📥</span>
-        <h1>Terminal Bereit</h1>
-        <p>Bitte Karte vor den Scanner halten</p>
+
+    <div class="scanner-box" id="main-box">
+        <span class="icon">📡</span>
+        <h1>Büro-Check-In</h1>
+        <p>Bitte Mitarbeiter-Karte vor den USB-Scanner halten</p>
+        
         <div class="status-container">
             <div class="status-dot"></div>
-            <span>Scanner aktiv</span>
+            <span id="status-text">Scanner bereit</span>
         </div>
+        
+        <div id="debug-info" class="error-log"></div>
     </div>
 
     <input type="text" id="scan-input" autofocus autocomplete="off">
 
     <script>
         const scanInput = document.getElementById('scan-input');
+        const debugInfo = document.getElementById('debug-info');
+        const statusText = document.getElementById('status-text');
+        const mainBox = document.getElementById('main-box');
 
-        // Sicherstellen, dass das Feld immer den Fokus hat
+        // Fokus-Management: Das Feld muss IMMER aktiv sein
         function focusInput() {
             scanInput.focus();
         }
 
-        // Falls der Fokus verloren geht (z.B. durch Klick), sofort wiederholen
-        document.addEventListener('click', focusInput);
+        // Alle 1 Sekunde sicherstellen, dass der Fokus nicht verloren ging
         setInterval(focusInput, 1000);
+        document.addEventListener('click', focusInput);
 
-        // Scan verarbeiten
+        // Scan-Verarbeitung
         scanInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                const scannedUrl = scanInput.value;
-                if (scannedUrl.includes('/quick-checkin')) {
-                    window.location.href = scannedUrl;
+                let scannedText = scanInput.value.trim();
+                
+                // FEHLER-KORREKTUR für Tastaturlayouts (US -> DE)
+                // Falls der Scanner 'ß' statt '?' oder '´' statt '=' tippt
+                scannedText = scannedText.replace(/ß/g, '?').replace(/´/g, '=');
+
+                console.log("Gescannter Text:", scannedText);
+
+                if (scannedText.includes('quick-checkin')) {
+                    // Erfolg: Optisches Feedback und Weiterleitung
+                    statusText.innerText = "Code erkannt! Verarbeite...";
+                    mainBox.style.borderColor = "#00ffcc";
+                    
+                    // Wir extrahieren nur den Pfad ab /quick-checkin, um Domain-Fehler zu vermeiden
+                    const parts = scannedText.split('quick-checkin');
+                    const targetPath = '/quick-checkin' + parts[1];
+                    
+                    window.location.href = targetPath;
                 } else {
-                    alert("Ungültiger Code gescannt!");
+                    // Fehler: Anzeige für den Admin
+                    statusText.innerText = "Ungültiger Code!";
+                    statusText.style.color = "#ff5555";
+                    mainBox.style.borderColor = "#ff5555";
+                    
+                    debugInfo.innerHTML = "Gelesen: <code>" + scannedText + "</code><br>Der Code muss 'quick-checkin' enthalten.";
+                    
+                    // Reset nach 3 Sekunden
+                    setTimeout(() => {
+                        scanInput.value = '';
+                        statusText.innerText = "Scanner bereit";
+                        statusText.style.color = "#00ffcc";
+                        mainBox.style.borderColor = "#333";
+                        debugInfo.innerText = "";
+                        focusInput();
+                    }, 4000);
+                    
                     scanInput.value = '';
                 }
             }
         });
+
+        // Initialer Fokus
+        window.onload = focusInput;
     </script>
 </body>
 </html>
