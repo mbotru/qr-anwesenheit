@@ -2,68 +2,65 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Karten-Scanner Terminal</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <title>USB Scanner Terminal</title>
     <style>
         body { 
             background: #0a0a0a; color: #00ffcc; font-family: 'Segoe UI', sans-serif; 
             margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;
         }
-        #video { width: 90%; max-width: 500px; border: 3px solid #333; border-radius: 20px; box-shadow: 0 0 30px rgba(0, 255, 204, 0.2); }
-        .container { position: relative; text-align: center; }
-        .scan-overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 260px; height: 260px; border: 2px dashed #00ffcc; border-radius: 10px; pointer-events: none;
+        .scanner-box {
+            border: 2px solid #333; padding: 40px; border-radius: 20px; background: #111; text-align: center;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.1);
         }
-        h1 { margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
-        .status { margin-top: 15px; font-weight: bold; font-size: 1.2rem; }
+        .icon { font-size: 80px; margin-bottom: 20px; display: block; }
+        /* Das Eingabefeld ist fast unsichtbar, muss aber den Fokus behalten */
+        #scan-input {
+            position: absolute; opacity: 0; top: 0; left: 0;
+        }
+        .status-dot {
+            width: 15px; height: 15px; background: #00ffcc; border-radius: 50%; display: inline-block;
+            margin-right: 10px; animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
-<body>
-    <h1>Mitarbeiter-Scan</h1>
-    <p>Bitte halten Sie Ihre Karte vor die Kamera</p>
-    
-    <div class="container">
-        <video id="video" playsinline></video>
-        <div class="scan-overlay"></div>
+<body onclick="focusInput()">
+    <div class="scanner-box">
+        <span class="icon">📥</span>
+        <h1>Terminal Bereit</h1>
+        <p>Bitte Karte vor den Scanner halten</p>
+        <div class="status-container">
+            <div class="status-dot"></div>
+            <span>Scanner aktiv</span>
+        </div>
     </div>
-    
-    <canvas id="canvas" style="display:none;"></canvas>
-    <div id="status" class="status">Kamera wird gestartet...</div>
+
+    <input type="text" id="scan-input" autofocus autocomplete="off">
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const status = document.getElementById('status');
-        const ctx = canvas.getContext('2d');
+        const scanInput = document.getElementById('scan-input');
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(stream => {
-                video.srcObject = stream;
-                video.setAttribute("playsinline", true);
-                video.play();
-                status.innerText = "Bereit zum Scannen";
-                requestAnimationFrame(tick);
-            });
+        // Sicherstellen, dass das Feld immer den Fokus hat
+        function focusInput() {
+            scanInput.focus();
+        }
 
-        function tick() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.height = video.videoHeight;
-                canvas.width = video.videoWidth;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
+        // Falls der Fokus verloren geht (z.B. durch Klick), sofort wiederholen
+        document.addEventListener('click', focusInput);
+        setInterval(focusInput, 1000);
 
-                if (code) {
-                    status.innerText = "Erkannt! Einen Moment...";
-                    status.style.color = "#fff";
-                    // Leitet direkt zur URL im QR-Code weiter (z.B. /quick-checkin?id=...)
-                    window.location.href = code.data;
-                    return; 
+        // Scan verarbeiten
+        scanInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const scannedUrl = scanInput.value;
+                if (scannedUrl.includes('/quick-checkin')) {
+                    window.location.href = scannedUrl;
+                } else {
+                    alert("Ungültiger Code gescannt!");
+                    scanInput.value = '';
                 }
             }
-            requestAnimationFrame(tick);
-        }
+        });
     </script>
 </body>
 </html>
