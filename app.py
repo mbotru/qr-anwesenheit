@@ -13,28 +13,28 @@ app = Flask(__name__)
 
 # --- KONFIGURATION ---
 BERLIN_TZ = pytz.timezone('Europe/Berlin')
-# WICHTIG: QR_SECRET und SECRET_KEY sollten in Render als Environment Variables gesetzt sein!
-QR_SECRET = os.environ.get('QR_SECRET', 'qr-sicherheit-2025-schluessel')
-app.secret_key = os.environ.get('SECRET_KEY', 'admin-session-schutz-123')
+QR_SECRET = os.environ.get('QR_SECRET', 'qr-sicherheit-2025')
+app.secret_key = os.environ.get('SECRET_KEY', 'session-geheim-123')
+
+# IP-Whitelist aus Render-Umgebungsvariablen laden (Standard: lokal)
+# In Render als ALLOWED_IPS anlegen, z.B. Wert: 84.150.1.2,127.0.0.1
+ALLOWED_IPS = os.environ.get('ALLOWED_IPS', '127.0.0.1').split(',')
 
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=timedelta(hours=2)
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8) # Längere Session für das Terminal
 )
 
-# Datenbank-Anbindung (SQLite lokal, Postgres auf Render)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
 
-# --- DATENBANK MODELL ---
 class CheckIn(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     vorname = db.Column(db.String(100), nullable=False)
@@ -42,51 +42,41 @@ class CheckIn(db.Model):
     buerotag_nachholen = db.Column(db.String(20), nullable=False)
     datum = db.Column(db.DateTime)
 
-# --- ADMIN LOGIN (Passwort: deinpasswort) ---
-ADMIN_BENUTZER = 'admin'
-ADMIN_PASSWORT_HASH = generate_password_hash('cwAXaAViCSdafFbyz')
+ADMIN_PASSWORT_HASH = generate_password_hash('deinpasswort')
 
 with app.app_context():
     db.create_all()
 
 # --- HILFSFUNKTIONEN ---
 
+def get_client_ip():
+    """Ermittelt die echte IP hinter dem Render-Proxy"""
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    return request.remote_addr
+
 def get_current_qr_token():
-    """Erzeugt einen Token, der alle 30 Sekunden wechselt"""
     time_step = int(datetime.now().timestamp() / 30)
-    hash_input = f"{QR_SECRET}{time_step}"
-    return hashlib.sha256(hash_input.encode()).hexdigest()[:10]
+    return hashlib.sha256(f"{QR_SECRET}{time_step}".encode()).hexdigest()[:10]
 
 def is_mobile():
-    """User-Agent Check für mobile Endgeräte"""
     user_agent = request.headers.get('User-Agent', '').lower()
-    mobile_keywords = ['android', 'iphone', 'ipad', 'iemobile', 'kindle', 'mobile']
-    return any(keyword in user_agent for keyword in mobile_keywords)
-
-def prevent_cache(response):
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
+    return any(k in user_agent for k in ['android', 'iphone', 'ipad', 'mobile'])
 
 # --- ROUTEN ---
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    # 1. Nur Mobile Browser zulassen
     if not is_mobile():
         return render_template('mobile_only.html'), 403
-
-    # 2. QR-Sicherheits-Check (Token aus URL)
-    user_token = request.args.get('token')
-    current_token = get_current_qr_token()
     
-    # Toleranz: Vorherigen Token auch erlauben
-    time_step_prev = int(datetime.now().timestamp() / 30) - 1
-    prev_token = hashlib.sha256(f"{QR_SECRET}{time_step_prev}".encode()).hexdigest()[:10]
-
-    if user_token not in [current_token, prev_token]:
-        return render_template('expired.html'), 403
+    user_token = request.args.get('token')
+    if user_token != get_current_qr_token():
+        # Kleines Zeitfenster-Fallback
+        prev_step = int(datetime.now().timestamp() / 30) - 1
+        prev_token = hashlib.sha256(f"{QR_SECRET}{prev_step}".encode()).hexdigest()[:10]
+        if user_token != prev_token:
+            return render_template('expired.html'), 403
 
     if request.method == 'POST':
         jetzt_berlin = datetime.now(BERLIN_TZ).replace(tzinfo=None)
@@ -99,110 +89,64 @@ def index():
         db.session.add(neuer_eintrag)
         db.session.commit()
         return render_template('index.html', success=True, token=user_token)
-    
     return render_template('index.html', token=user_token)
 
 @app.route('/display')
 def display_qr():
-    """Terminal-Seite für das Tablet vor Ort (erfordert Admin-Login)"""
-    if session.get('logged_in') is not True:
+    """Terminal-Seite: Erlaubt Zugriff via IP-Whitelist ODER Login"""
+    client_ip = get_client_ip()
+    is_authorized_ip = client_ip in ALLOWED_IPS
+    is_logged_in = session.get('logged_in') is True
+
+    if not (is_authorized_ip or is_logged_in):
+        # Wenn weder IP noch Login stimmen -> Login erzwungen
         return redirect(url_for('admin'))
+
     return render_template('qr_display.html')
 
 @app.route('/get_qr_token')
 def get_token_api():
-    """API für das automatische Update des QR-Codes"""
+    client_ip = get_client_ip()
+    if client_ip not in ALLOWED_IPS and session.get('logged_in') is not True:
+        return jsonify({"error": "Unauthorized"}), 403
     return jsonify({"token": get_current_qr_token()})
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    if session.get('logged_in') is True:
-        return redirect(url_for('dashboard'))
+    if session.get('logged_in') is True: return redirect(url_for('dashboard'))
     error = None
     if request.method == 'POST':
-        if request.form.get('username') == ADMIN_BENUTZER and \
+        if request.form.get('username') == 'admin' and \
            check_password_hash(ADMIN_PASSWORT_HASH, request.form.get('password')):
-            session.clear()
             session.permanent = True
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
-        error = 'Zugangsdaten ungültig.'
+        error = 'Login fehlgeschlagen.'
     return render_template('admin.html', error=error)
 
 @app.route('/dashboard')
 def dashboard():
-    """Admin Dashboard mit kombinierter Suche und Datumsfilter"""
-    if session.get('logged_in') is not True:
-        return redirect(url_for('admin'))
-    
+    if session.get('logged_in') is not True: return redirect(url_for('admin'))
     search = request.args.get('search', '').strip()
-    date_val = request.args.get('date', '') # Name konsistent zu 'date' halten
-    
+    date_val = request.args.get('date', '')
     query = CheckIn.query
     if search:
-        combined_name = func.concat(CheckIn.vorname, ' ', CheckIn.nachname)
-        query = query.filter(or_(
-            CheckIn.vorname.ilike(f'%{search}%'), 
-            CheckIn.nachname.ilike(f'%{search}%'),
-            combined_name.ilike(f'%{search}%')
-        ))
+        combined = func.concat(CheckIn.vorname, ' ', CheckIn.nachname)
+        query = query.filter(or_(CheckIn.vorname.ilike(f'%{search}%'), 
+                                 CheckIn.nachname.ilike(f'%{search}%'),
+                                 combined.ilike(f'%{search}%')))
     if date_val:
         query = query.filter(func.date(CheckIn.datum) == date_val)
-        
     checkins = query.order_by(CheckIn.datum.desc()).all()
-    
-    # Hier werden 'search' und 'date' ans Template gegeben
-    res = make_response(render_template('dashboard.html', 
-                                        checkins=checkins, 
-                                        search=search, 
-                                        date=date_val))
-    return prevent_cache(res)
+    return render_template('dashboard.html', checkins=checkins, search=search, date=date_val)
 
 @app.route('/admin/delete/<int:id>')
 def delete_entry(id):
-    """Löschen eines Eintrags mit Beibehaltung der Filter"""
-    if session.get('logged_in') is not True:
-        return redirect(url_for('admin'))
-    
+    if session.get('logged_in') is not True: return redirect(url_for('admin'))
     entry = CheckIn.query.get_or_404(id)
     db.session.delete(entry)
     db.session.commit()
-    
-    # Filter aus dem URL-Parameter abgreifen
-    search = request.args.get('search', '')
-    date_val = request.args.get('date', '')
-    
-    return redirect(url_for('dashboard', search=search, date=date_val))
-
-@app.route('/admin/export/csv')
-def export_csv():
-    """Exportiert die aktuell gefilterte Liste als CSV"""
-    if session.get('logged_in') is not True:
-        return redirect(url_for('admin'))
-
-    search = request.args.get('search', '').strip()
-    date_val = request.args.get('date', '')
-
-    query = CheckIn.query
-    if search:
-        combined_name = func.concat(CheckIn.vorname, ' ', CheckIn.nachname)
-        query = query.filter(or_(CheckIn.vorname.ilike(f'%{search}%'), 
-                                 CheckIn.nachname.ilike(f'%{search}%'),
-                                 combined_name.ilike(f'%{search}%')))
-    if date_val:
-        query = query.filter(func.date(CheckIn.datum) == date_val)
-
-    eintraege = query.all()
-    si = io.StringIO()
-    cw = csv.writer(si, delimiter=';')
-    cw.writerow(['Vorname', 'Nachname', 'Bürotag nachholen', 'Datum'])
-    for r in eintraege:
-        cw.writerow([r.vorname, r.nachname, r.buerotag_nachholen, r.datum.strftime('%d.%m.%Y %H:%M')])
-    
-    output = io.BytesIO()
-    output.write(si.getvalue().encode('utf-8'))
-    output.seek(0)
-    return send_file(output, mimetype='text/csv', download_name='checkins_export.csv', as_attachment=True)
+    return redirect(url_for('dashboard', search=request.args.get('search'), date=request.args.get('date')))
 
 @app.route('/logout')
 def logout():
@@ -210,5 +154,4 @@ def logout():
     return redirect(url_for('admin'))
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
