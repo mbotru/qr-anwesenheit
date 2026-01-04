@@ -16,8 +16,6 @@ BERLIN_TZ = pytz.timezone('Europe/Berlin')
 QR_SECRET = os.environ.get('QR_SECRET', 'qr-sicherheit-2025-system')
 app.secret_key = os.environ.get('SECRET_KEY', 'admin-session-schutz-123')
 
-ALLOWED_IPS = [ip.strip() for ip in os.environ.get('ALLOWED_IPS', '127.0.0.1').split(',')]
-
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
@@ -25,6 +23,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12)
 )
 
+# Datenbank-Anbindung
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -49,11 +48,6 @@ ADMIN_BENUTZER = 'admin'
 ADMIN_PASSWORT_HASH = generate_password_hash(os.environ.get('ADMIN_PASSWORD', 'deinpasswort'))
 
 # --- HILFSFUNKTIONEN ---
-def get_client_ip():
-    if request.headers.get('X-Forwarded-For'):
-        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    return request.remote_addr
-
 def get_current_qr_token():
     time_step = int(datetime.now().timestamp() / 30)
     return hashlib.sha256(f"{QR_SECRET}{time_step}".encode()).hexdigest()[:10]
@@ -62,7 +56,7 @@ def is_mobile():
     ua = request.headers.get('User-Agent', '').lower()
     return any(k in ua for k in ['android', 'iphone', 'ipad', 'mobile'])
 
-# --- ROUTEN: FRONTEND ---
+# --- ROUTEN: FRONTEND (Check-In via QR) ---
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -92,24 +86,18 @@ def index():
     
     return render_template('index.html', token=user_token)
 
-# --- ROUTEN: TERMINAL & SCANNER ---
+# --- ROUTEN: TERMINAL & SCANNER (Ohne IP-Sperre) ---
 
 @app.route('/display')
 def display_qr():
-    if get_client_ip() in ALLOWED_IPS or session.get('logged_in'):
-        return render_template('qr_display.html')
-    return render_template('ip_denied.html', ip=get_client_ip()), 403
+    return render_template('qr_display.html')
 
 @app.route('/scanner')
 def scanner():
-    if get_client_ip() in ALLOWED_IPS or session.get('logged_in'):
-        return render_template('scanner.html')
-    return render_template('ip_denied.html', ip=get_client_ip()), 403
+    return render_template('scanner.html')
 
 @app.route('/quick-checkin')
 def quick_checkin():
-    if get_client_ip() not in ALLOWED_IPS:
-        return "Zugriff verweigert.", 403
     m_id = request.args.get('id')
     if not m_id or "_" not in m_id:
         return "Ungültiger Code.", 400
@@ -122,9 +110,7 @@ def quick_checkin():
 
 @app.route('/get_qr_token')
 def get_token_api():
-    if get_client_ip() in ALLOWED_IPS or session.get('logged_in'):
-        return jsonify({"token": get_current_qr_token()})
-    return jsonify({"error": "Unauthorized"}), 403
+    return jsonify({"token": get_current_qr_token()})
 
 # --- ADMIN BEREICH ---
 
@@ -159,7 +145,7 @@ def dashboard():
     checkins = query.order_by(CheckIn.datum.desc()).all()
     return render_template('dashboard.html', checkins=checkins, search=search, date=date_val)
 
-# --- KORRIGIERTER EXPORT BEREICH ---
+# --- KORRIGIERTER EXPORT (Excel-Optimiert) ---
 @app.route('/export_csv')
 def export_csv():
     if not session.get('logged_in'):
@@ -176,16 +162,14 @@ def export_csv():
         
     checkins = query.order_by(CheckIn.datum.desc()).all()
     
-    # Datei im Arbeitsspeicher erstellen
     si = io.StringIO()
-    # WICHTIG: delimiter=';' für Excel-Spaltentrennung
+    # Semikolon als Trenner für deutsches Excel
     cw = csv.writer(si, delimiter=';', quoting=csv.QUOTE_MINIMAL)
     
-    # Kopfzeile
+    # Kopfzeile mit getrennten Spalten
     cw.writerow(['Vorname', 'Nachname', 'Datum', 'Uhrzeit', 'Nachholen'])
     
     for c in checkins:
-        # Datum und Uhrzeit trennen und formatieren
         d_str = c.datum.strftime('%d.%m.%Y') if c.datum else ''
         t_str = c.datum.strftime('%H:%M') if c.datum else ''
         
@@ -197,7 +181,7 @@ def export_csv():
             c.buerotag_nachholen
         ])
     
-    # UTF-8-BOM hinzufügen, damit Excel Umlaute erkennt
+    # UTF-8-BOM (\\ufeff) hinzufügen für korrekte Umlaute in Excel
     csv_output = "\ufeff" + si.getvalue()
     
     output = make_response(csv_output)
