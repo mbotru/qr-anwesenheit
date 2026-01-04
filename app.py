@@ -16,7 +16,6 @@ BERLIN_TZ = pytz.timezone('Europe/Berlin')
 QR_SECRET = os.environ.get('QR_SECRET', 'qr-sicherheit-2025-system')
 app.secret_key = os.environ.get('SECRET_KEY', 'admin-session-schutz-123')
 
-# IP-Whitelist aus Render-Umgebungsvariablen
 ALLOWED_IPS = [ip.strip() for ip in os.environ.get('ALLOWED_IPS', '127.0.0.1').split(',')]
 
 app.config.update(
@@ -26,7 +25,6 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12)
 )
 
-# Datenbank-Anbindung (PostgreSQL auf Render / SQLite lokal)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -48,7 +46,6 @@ with app.app_context():
 
 # --- ADMIN LOGIN DATEN ---
 ADMIN_BENUTZER = 'admin'
-# Falls keine Umgebungsvariable gesetzt ist, wird 'deinpasswort' als Standard genutzt
 ADMIN_PASSWORT_HASH = generate_password_hash(os.environ.get('ADMIN_PASSWORD', 'deinpasswort'))
 
 # --- HILFSFUNKTIONEN ---
@@ -75,7 +72,6 @@ def index():
     user_token = request.args.get('token')
     current_token = get_current_qr_token()
     
-    # Letzten Token auch erlauben für bessere User Experience (Toleranzfenster)
     prev_step = int(datetime.now().timestamp() / 30) - 1
     prev_token = hashlib.sha256(f"{QR_SECRET}{prev_step}".encode()).hexdigest()[:10]
 
@@ -163,6 +159,7 @@ def dashboard():
     checkins = query.order_by(CheckIn.datum.desc()).all()
     return render_template('dashboard.html', checkins=checkins, search=search, date=date_val)
 
+# --- KORRIGIERTER EXPORT BEREICH ---
 @app.route('/export_csv')
 def export_csv():
     if not session.get('logged_in'):
@@ -177,23 +174,35 @@ def export_csv():
     if date_val:
         query = query.filter(func.date(CheckIn.datum) == date_val)
         
-    checkins = query.all()
+    checkins = query.order_by(CheckIn.datum.desc()).all()
+    
+    # Datei im Arbeitsspeicher erstellen
     si = io.StringIO()
-    cw = csv.writer(si)
+    # WICHTIG: delimiter=';' für Excel-Spaltentrennung
+    cw = csv.writer(si, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+    
+    # Kopfzeile
     cw.writerow(['Vorname', 'Nachname', 'Datum', 'Uhrzeit', 'Nachholen'])
     
     for c in checkins:
+        # Datum und Uhrzeit trennen und formatieren
+        d_str = c.datum.strftime('%d.%m.%Y') if c.datum else ''
+        t_str = c.datum.strftime('%H:%M') if c.datum else ''
+        
         cw.writerow([
             c.vorname, 
             c.nachname, 
-            c.datum.strftime('%d.%m.%Y'), 
-            c.datum.strftime('%H:%M'), 
+            d_str, 
+            t_str, 
             c.buerotag_nachholen
         ])
     
-    output = make_response(si.getvalue())
+    # UTF-8-BOM hinzufügen, damit Excel Umlaute erkennt
+    csv_output = "\ufeff" + si.getvalue()
+    
+    output = make_response(csv_output)
     output.headers["Content-Disposition"] = "attachment; filename=export_anwesenheit.csv"
-    output.headers["Content-type"] = "text/csv"
+    output.headers["Content-type"] = "text/csv; charset=utf-8"
     return output
 
 @app.route('/admin/delete/<int:id>')
