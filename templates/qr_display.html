@@ -3,102 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Terminal</title>
+    <title>Anwesenheit Check</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* Entfernt den Vollbildmodus */
+        /* Kompakter Modus: Kein Fullscreen */
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: #f0f2f5; 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #f4f7f6; 
             margin: 0; 
-            padding: 20px;
+            padding: 50px 20px;
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* Karte erscheint oben/mittig statt bildschirmfüllend */
         }
 
-        .qr-wrapper { 
+        .container { 
             background: white; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1); 
             text-align: center;
+            max-width: 350px; /* Begrenzt die Breite */
             width: 100%;
-            max-width: 320px; /* Kompakte Breite */
         }
 
-        h2 { 
-            font-size: 1.1rem; 
-            color: #1c1e21; 
-            margin: 0 0 15px 0; 
-        }
-
+        h2 { font-size: 1.2rem; color: #333; margin-top: 0; }
+        
         #qrcode { 
+            margin: 20px auto;
             display: flex;
             justify-content: center;
-            margin: 10px 0;
-            min-height: 200px; /* Verhindert Layout-Springen */
+            min-height: 200px;
         }
 
         #status { 
-            font-size: 0.75rem; 
-            color: #65676b; 
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #ebedf0;
+            font-size: 0.8rem; 
+            color: #666; 
+            border-top: 1px solid #eee; 
+            padding-top: 15px;
+            margin-top: 10px;
         }
 
-        .error { color: #d93025; font-weight: bold; }
+        .success { color: #28a745; }
     </style>
 </head>
 <body>
 
-    <div class="qr-wrapper">
-        <h2>Anwesenheits-Check</h2>
-        
+    <div class="container">
+        <h2>QR-Terminal</h2>
         <div id="qrcode"></div>
-        
-        <p id="status">Initialisiere...</p>
+        <p id="status">Verbinde zum Server...</p>
     </div>
 
     <script>
-        const qrBox = document.getElementById("qrcode");
-        const statusMsg = document.getElementById("status");
-        let qrInstance = null;
+        const qrContainer = document.getElementById("qrcode");
+        const statusBox = document.getElementById("status");
+        let qr = null;
 
-        async function fetchNewToken() {
+        async function updateQR() {
             try {
-                // Pfad aus deinem Log: /get_qr_token
+                // Nutzt die Route aus deinem Log
                 const response = await fetch('/get_qr_token');
-                if (!response.ok) throw new Error("HTTP Fehler");
-                
                 const data = await response.json();
 
                 if (data.qr_string) {
-                    if (qrInstance === null) {
-                        qrInstance = new QRCode(qrBox, {
+                    if (qr === null) {
+                        qr = new QRCode(qrContainer, {
                             text: data.qr_string,
                             width: 200,
-                            height: 200,
-                            correctLevel: QRCode.CorrectLevel.M
+                            height: 200
                         });
                     } else {
-                        qrInstance.makeCode(data.qr_string);
+                        qr.makeCode(data.qr_string);
                     }
-                    statusMsg.innerText = "Aktualisiert: " + new Date().toLocaleTimeString();
-                    statusMsg.classList.remove("error");
+                    statusBox.innerHTML = "<span class='success'>●</span> Live: " + new Date().toLocaleTimeString();
                 }
             } catch (err) {
-                console.error("Fehler beim Abrufen:", err);
-                statusMsg.innerText = "Verbindung unterbrochen...";
-                statusMsg.classList.add("error");
+                statusBox.innerHTML = "<span style='color:red'>●</span> Verbindung unterbrochen";
             }
         }
 
-        // Startet sofort beim Laden und wiederholt alle 15 Sekunden
         document.addEventListener("DOMContentLoaded", () => {
-            fetchNewToken();
-            setInterval(fetchNewToken, 15000);
+            updateQR();
+            setInterval(updateQR, 15000); // Alle 15 Sek erneuern
         });
     </script>
 </body>
