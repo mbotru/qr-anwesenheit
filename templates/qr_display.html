@@ -6,66 +6,73 @@
     <title>QR-Anwesenheit - Live Terminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
-        #qr-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        #qrcode { margin: 20px; }
-        .info { margin-bottom: 10px; color: #555; }
-        /* Der Button wird nicht mehr benötigt und ausgeblendet */
-        #start-btn { display: none; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
+        #qr-container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        #qrcode { margin: 20px auto; display: flex; justify-content: center; }
+        h2 { color: #333; margin-top: 0; }
+        .info { color: #666; margin-bottom: 20px; }
+        #status { font-weight: bold; padding: 10px; border-radius: 5px; }
+        .error { color: #d9534f; background-color: #f9ebeb; }
+        .success { color: #5cb85c; }
     </style>
 </head>
 <body>
 
     <div id="qr-container">
         <h2>Anwesenheit scannen</h2>
-        <p class="info">Bitte den Code mit der App scannen</p>
+        <p class="info">Der Code wird automatisch alle 15 Sekunden aktualisiert.</p>
         
         <div id="qrcode"></div>
         
-        <p id="status">Lade QR-Code...</p>
+        <p id="status">Initialisiere...</p>
     </div>
 
     <script>
-        const qrContainer = document.getElementById("qrcode");
+        const qrElement = document.getElementById("qrcode");
         const statusText = document.getElementById("status");
         let qrCodeInstance = null;
 
-        // Funktion zum Abrufen und Anzeigen des QR-Codes
-        async function fetchNextQR() {
+        async function updateQR() {
             try {
-                // Pfad muss zu deiner Flask/Django Route passen (meist /get_qr_data)
-                const response = await fetch('/get_qr_data'); 
+                // WICHTIG: Prüfe in deiner app.py, wie die Route heißt. 
+                // Meist ist es /generate_qr oder /get_qr
+                const response = await fetch('/generate_qr'); 
+                
+                if (!response.ok) throw new Error('Server antwortet nicht korrekt');
+                
                 const data = await response.json();
 
-                if (data.qr_string) {
-                    if (qrCodeInstance === null) {
-                        // Initialisiere den QR-Code beim ersten Mal
-                        qrCodeInstance = new QRCode(qrContainer, {
-                            text: data.qr_string,
-                            width: 300,
-                            height: 300
+                // Falls die Daten als JSON kommen (z.B. { "code": "xyz123" })
+                const qrString = data.code || data.qr_string || data.data;
+
+                if (qrString) {
+                    if (!qrCodeInstance) {
+                        qrCodeInstance = new QRCode(qrElement, {
+                            text: qrString,
+                            width: 280,
+                            height: 280,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
                         });
                     } else {
-                        // Aktualisiere den bestehenden QR-Code
-                        qrCodeInstance.clear();
-                        qrCodeInstance.makeCode(data.qr_string);
+                        qrCodeInstance.makeCode(qrString);
                     }
-                    statusText.innerText = "Code ist gültig";
+                    statusText.innerText = "Code ist aktiv";
+                    statusText.className = "success";
                 }
             } catch (err) {
-                console.error("Fehler beim Laden des QR-Codes:", err);
-                statusText.innerText = "Verbindungsfehler...";
+                console.error("Fehler:", err);
+                statusText.innerText = "Verbindungsfehler: Backend nicht erreichbar";
+                statusText.className = "error";
             }
         }
 
-        // --- ENTSCHEIDENDE ÄNDERUNG ---
-        // Statt auf einen Klick zu warten, führen wir die Funktion sofort aus
-        document.addEventListener("DOMContentLoaded", function() {
-            // Sofort beim Laden starten
-            fetchNextQR();
-
-            // Optional: Alle 15 Sekunden aktualisieren (Dynamic QR)
-            setInterval(fetchNextQR, 15000); 
+        // Sofort beim Laden ausführen
+        document.addEventListener("DOMContentLoaded", () => {
+            updateQR();
+            // Alle 15 Sekunden erneuern
+            setInterval(updateQR, 15000);
         });
     </script>
 </body>
