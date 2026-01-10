@@ -2,104 +2,70 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>QR Terminal - Kiosk Mode</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR-Anwesenheit - Live Terminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { 
-            background: #000; 
-            color: white; 
-            font-family: 'Segoe UI', sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            margin: 0; 
-            overflow: hidden; 
-        }
-        #qrcode { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 20px; 
-            margin: 30px; 
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
-        }
-        h1 { font-size: 3rem; color: #00ffff; margin-bottom: 10px; }
-        .info { font-size: 1.5rem; opacity: 0.8; margin-bottom: 20px; }
-        
-        /* Start-Button für Vollbild */
-        #fullscreen-btn {
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            background: #00ffff;
-            color: #000;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            z-index: 100;
-        }
-        .hidden { display: none !important; }
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
+        #qr-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        #qrcode { margin: 20px; }
+        .info { margin-bottom: 10px; color: #555; }
+        /* Der Button wird nicht mehr benötigt und ausgeblendet */
+        #start-btn { display: none; }
     </style>
 </head>
 <body>
-    <button id="fullscreen-btn" onclick="startKiosk()">Terminal starten (Full Screen)</button>
 
-    <div id="content" class="hidden">
-        <h1>Check-In Terminal</h1>
-        <p class="info">Bitte QR-Code scannen</p>
+    <div id="qr-container">
+        <h2>Anwesenheit scannen</h2>
+        <p class="info">Bitte den Code mit der App scannen</p>
+        
         <div id="qrcode"></div>
-        <p id="status" style="color: #444;">Code wird aktualisiert...</p>
+        
+        <p id="status">Lade QR-Code...</p>
     </div>
 
     <script>
-        const qrcode = new QRCode(document.getElementById("qrcode"), { 
-            width: 450, 
-            height: 450,
-            correctLevel: QRCode.CorrectLevel.H 
-        });
-        
-        let lastToken = "";
+        const qrContainer = document.getElementById("qrcode");
+        const statusText = document.getElementById("status");
+        let qrCodeInstance = null;
 
-        async function updateQR() {
+        // Funktion zum Abrufen und Anzeigen des QR-Codes
+        async function fetchNextQR() {
             try {
-                const res = await fetch('/get_qr_token');
-                const data = await res.json();
-                if (data.token && data.token !== lastToken) {
-                    lastToken = data.token;
-                    const url = `${window.location.origin}/?token=${data.token}`;
-                    qrcode.clear();
-                    qrcode.makeCode(url);
+                // Pfad muss zu deiner Flask/Django Route passen (meist /get_qr_data)
+                const response = await fetch('/get_qr_data'); 
+                const data = await response.json();
+
+                if (data.qr_string) {
+                    if (qrCodeInstance === null) {
+                        // Initialisiere den QR-Code beim ersten Mal
+                        qrCodeInstance = new QRCode(qrContainer, {
+                            text: data.qr_string,
+                            width: 300,
+                            height: 300
+                        });
+                    } else {
+                        // Aktualisiere den bestehenden QR-Code
+                        qrCodeInstance.clear();
+                        qrCodeInstance.makeCode(data.qr_string);
+                    }
+                    statusText.innerText = "Code ist gültig";
                 }
-            } catch (e) { console.error("Update fehlgeschlagen"); }
+            } catch (err) {
+                console.error("Fehler beim Laden des QR-Codes:", err);
+                statusText.innerText = "Verbindungsfehler...";
+            }
         }
 
-        function startKiosk() {
-            // Vollbild aktivieren
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) { /* Safari */
-                elem.webkitRequestFullscreen();
-            } else if (elem.msRequestFullscreen) { /* IE11 */
-                elem.msRequestFullscreen();
-            }
+        // --- ENTSCHEIDENDE ÄNDERUNG ---
+        // Statt auf einen Klick zu warten, führen wir die Funktion sofort aus
+        document.addEventListener("DOMContentLoaded", function() {
+            // Sofort beim Laden starten
+            fetchNextQR();
 
-            // Button verstecken, Inhalt zeigen
-            document.getElementById('fullscreen-btn').classList.add('hidden');
-            document.getElementById('content').classList.remove('hidden');
-            
-            // Update starten
-            setInterval(updateQR, 10000);
-            updateQR();
-        }
-
-        // Automatisches Beenden des Vollbilds abfangen (optional)
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement) {
-                document.getElementById('fullscreen-btn').classList.remove('hidden');
-                document.getElementById('content').classList.add('hidden');
-            }
+            // Optional: Alle 15 Sekunden aktualisieren (Dynamic QR)
+            setInterval(fetchNextQR, 15000); 
         });
     </script>
 </body>
