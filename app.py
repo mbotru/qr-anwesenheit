@@ -1,27 +1,42 @@
-from flask import Flask, render_template, jsonify
+import os
 import uuid
 import time
+from flask import Flask, render_template, jsonify
 
 app = Flask(__name__)
 
-# Hauptseite laden
+# 1. Haupt-Route (Root)
 @app.route('/')
 def index():
-    # Stellt sicher, dass die Datei templates/qr_display.html existiert
+    """Leitet die Startseite direkt auf das QR-Terminal."""
     return render_template('qr_display.html')
 
-# Daten-Schnittstelle für den QR-Code
+# 2. Deine spezifische Route aus den Logs
+@app.route('/display')
+def display_page():
+    """Behebt den 404-Fehler für /display."""
+    return render_template('qr_display.html')
+
+# 3. Daten-Endpunkt für den QR-Code (wird vom JavaScript abgefragt)
 @app.route('/get_qr')
 def get_qr():
-    # Erzeugt einen neuen Token (Inhalt des QR-Codes)
-    new_token = f"QR_{int(time.time())}_{uuid.uuid4().hex[:6]}"
-    
-    # Gibt die Daten als JSON zurück, damit JS sie lesen kann
-    return jsonify({
-        "status": "success",
-        "qr_string": new_token
-    })
+    """Generiert einen Token für den QR-Code."""
+    try:
+        # Einzigartiger Token aus Zeitstempel und Zufall-ID
+        token = f"TOKEN-{int(time.time())}-{uuid.uuid4().hex[:6]}"
+        return jsonify({
+            "status": "success",
+            "qr_string": token
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
+# Start-Konfiguration für Render.com
 if __name__ == '__main__':
-    # host='0.0.0.0' erlaubt Zugriff von anderen Geräten im WLAN
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Render nutzt dynamische Ports, daher lesen wir die Umgebungsvariable aus
+    port = int(os.environ.get("PORT", 5000))
+    # host='0.0.0.0' ist zwingend erforderlich für das Deployment
+    app.run(host='0.0.0.0', port=port)
