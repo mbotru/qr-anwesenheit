@@ -3,76 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR-Anwesenheit - Live Terminal</title>
+    <title>QR-Anwesenheit | Live Terminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-        #qr-container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
-        #qrcode { margin: 20px auto; display: flex; justify-content: center; }
-        h2 { color: #333; margin-top: 0; }
-        .info { color: #666; margin-bottom: 20px; }
-        #status { font-weight: bold; padding: 10px; border-radius: 5px; }
-        .error { color: #d9534f; background-color: #f9ebeb; }
-        .success { color: #5cb85c; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; background-color: #f0f2f5; 
+        }
+        .card {
+            background: white; padding: 2rem; border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
+            max-width: 400px; width: 90%;
+        }
+        #qrcode {
+            margin: 20px auto;
+            display: flex; justify-content: center;
+        }
+        .status {
+            font-size: 0.9rem; color: #666; margin-top: 10px;
+            padding: 8px; border-radius: 5px;
+        }
+        .error { color: #dc3545; background: #ffe6e6; }
+        .success { color: #28a745; }
     </style>
 </head>
 <body>
 
-    <div id="qr-container">
-        <h2>Anwesenheit scannen</h2>
-        <p class="info">Der Code wird automatisch alle 15 Sekunden aktualisiert.</p>
+    <div class="card">
+        <h2 style="margin-top:0">Anwesenheit scannen</h2>
+        <p>Bitte halten Sie Ihr Gerät vor den Code.</p>
         
         <div id="qrcode"></div>
         
-        <p id="status">Initialisiere...</p>
+        <div id="status-box" class="status">Initialisiere Kamera...</div>
     </div>
 
     <script>
-        const qrElement = document.getElementById("qrcode");
-        const statusText = document.getElementById("status");
-        let qrCodeInstance = null;
+        const qrContainer = document.getElementById("qrcode");
+        const statusBox = document.getElementById("status-box");
+        let qrInstance = null;
 
-        async function updateQR() {
+        async function updateQRCode() {
             try {
-                // WICHTIG: Prüfe in deiner app.py, wie die Route heißt. 
-                // Meist ist es /generate_qr oder /get_qr
-                const response = await fetch('/generate_qr'); 
+                // Wir rufen die Route in app.py auf
+                const response = await fetch('/get_qr_data');
                 
-                if (!response.ok) throw new Error('Server antwortet nicht korrekt');
+                if (!response.ok) throw new Error("Server nicht erreichbar");
                 
                 const data = await response.json();
 
-                // Falls die Daten als JSON kommen (z.B. { "code": "xyz123" })
-                const qrString = data.code || data.qr_string || data.data;
-
-                if (qrString) {
-                    if (!qrCodeInstance) {
-                        qrCodeInstance = new QRCode(qrElement, {
-                            text: qrString,
-                            width: 280,
-                            height: 280,
+                if (data.qr_string) {
+                    if (qrInstance === null) {
+                        // Ersten QR-Code erstellen
+                        qrInstance = new QRCode(qrContainer, {
+                            text: data.qr_string,
+                            width: 256,
+                            height: 256,
                             colorDark : "#000000",
                             colorLight : "#ffffff",
                             correctLevel : QRCode.CorrectLevel.H
                         });
                     } else {
-                        qrCodeInstance.makeCode(qrString);
+                        // Bestehenden Code aktualisieren
+                        qrInstance.makeCode(data.qr_string);
                     }
-                    statusText.innerText = "Code ist aktiv";
-                    statusText.className = "success";
+                    
+                    statusBox.innerText = "Code aktualisiert: " + new Date().toLocaleTimeString();
+                    statusBox.className = "status success";
                 }
             } catch (err) {
                 console.error("Fehler:", err);
-                statusText.innerText = "Verbindungsfehler: Backend nicht erreichbar";
-                statusText.className = "error";
+                statusBox.innerText = "Verbindungsfehler! Backend prüfen.";
+                statusBox.className = "status error";
             }
         }
 
-        // Sofort beim Laden ausführen
+        // --- AUTOMATISIERUNG ---
+        // 1. Sofort beim Laden starten
         document.addEventListener("DOMContentLoaded", () => {
-            updateQR();
-            // Alle 15 Sekunden erneuern
-            setInterval(updateQR, 15000);
+            updateQRCode();
+            
+            // 2. Alle 10 Sekunden automatisch erneuern
+            setInterval(updateQRCode, 10000);
         });
     </script>
 </body>
