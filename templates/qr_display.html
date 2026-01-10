@@ -3,88 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anwesenheit Check</title>
+    <title>QR Terminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* Kompakter Modus: Kein Fullscreen */
+        /* KEIN FULLSCREEN DESIGN */
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background-color: #f4f7f6; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
             margin: 0; 
-            padding: 50px 20px;
+            padding: 40px 10px;
             display: flex;
             justify-content: center;
         }
 
-        .container { 
+        .terminal-card { 
             background: white; 
             padding: 25px; 
-            border-radius: 15px; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1); 
+            border-radius: 16px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
             text-align: center;
-            max-width: 350px; /* Begrenzt die Breite */
             width: 100%;
+            max-width: 340px; /* Kompakte Kartenansicht */
         }
 
-        h2 { font-size: 1.2rem; color: #333; margin-top: 0; }
-        
+        h2 { 
+            font-size: 1.25rem; 
+            color: #333; 
+            margin: 0 0 5px 0; 
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
         #qrcode { 
-            margin: 20px auto;
             display: flex;
             justify-content: center;
-            min-height: 200px;
+            padding: 10px;
+            background: #fff;
         }
 
-        #status { 
-            font-size: 0.8rem; 
-            color: #666; 
-            border-top: 1px solid #eee; 
+        #status-bar { 
+            margin-top: 20px;
             padding-top: 15px;
-            margin-top: 10px;
+            border-top: 1px solid #eee;
+            font-size: 0.75rem;
+            color: #999;
         }
 
-        .success { color: #28a745; }
+        .live-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #28a745;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>QR-Terminal</h2>
+    <div class="terminal-card">
+        <h2>Anwesenheit</h2>
+        <p class="hint">Code scanen zum Einchecken</p>
+        
         <div id="qrcode"></div>
-        <p id="status">Verbinde zum Server...</p>
+        
+        <div id="status-bar">
+            <span class="live-dot"></span>
+            <span id="time-text">Verbindung aktiv...</span>
+        </div>
     </div>
 
     <script>
-        const qrContainer = document.getElementById("qrcode");
-        const statusBox = document.getElementById("status");
-        let qr = null;
+        const qrBox = document.getElementById("qrcode");
+        const timeText = document.getElementById("time-text");
+        let qrGenerator = null;
 
-        async function updateQR() {
+        async function refresh() {
             try {
-                // Nutzt die Route aus deinem Log
+                // Nutzt exakt die Route aus deinem Log
                 const response = await fetch('/get_qr_token');
                 const data = await response.json();
 
                 if (data.qr_string) {
-                    if (qr === null) {
-                        qr = new QRCode(qrContainer, {
+                    if (qrGenerator === null) {
+                        qrGenerator = new QRCode(qrBox, {
                             text: data.qr_string,
-                            width: 200,
-                            height: 200
+                            width: 220,
+                            height: 220,
+                            correctLevel: QRCode.CorrectLevel.M
                         });
                     } else {
-                        qr.makeCode(data.qr_string);
+                        qrGenerator.makeCode(data.qr_string);
                     }
-                    statusBox.innerHTML = "<span class='success'>●</span> Live: " + new Date().toLocaleTimeString();
+                    timeText.innerText = "Letztes Update: " + new Date().toLocaleTimeString();
                 }
             } catch (err) {
-                statusBox.innerHTML = "<span style='color:red'>●</span> Verbindung unterbrochen";
+                timeText.innerText = "Fehler: Backend nicht erreichbar";
+                console.error("Update failed", err);
             }
         }
 
+        // Automatischer Start
         document.addEventListener("DOMContentLoaded", () => {
-            updateQR();
-            setInterval(updateQR, 15000); // Alle 15 Sek erneuern
+            refresh();
+            setInterval(refresh, 15000); // 15 Sekunden Intervall
         });
     </script>
 </body>
