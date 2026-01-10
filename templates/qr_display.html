@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Terminal</title>
+    <title>QR Terminal | Dark Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* KEIN FULLSCREEN DESIGN */
+        /* DARK MODE DESIGN */
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #121212; /* Sehr dunkler Hintergrund */
+            color: #e0e0e0; 
             margin: 0; 
             padding: 40px 10px;
             display: flex;
@@ -17,56 +18,68 @@
         }
 
         .terminal-card { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 16px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            background: #1e1e1e; /* Dunkelgraue Karte */
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
             text-align: center;
             width: 100%;
-            max-width: 340px; /* Kompakte Kartenansicht */
+            max-width: 340px;
+            border: 1px solid #333;
         }
 
         h2 { 
-            font-size: 1.25rem; 
-            color: #333; 
-            margin: 0 0 5px 0; 
+            font-size: 1.4rem; 
+            color: #ffffff; 
+            margin: 0 0 8px 0; 
         }
 
         .hint {
-            font-size: 0.85rem;
-            color: #666;
-            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #b0b0b0;
+            margin-bottom: 25px;
         }
 
+        /* QR-Code Container Anpassung für Dark Mode */
         #qrcode { 
             display: flex;
             justify-content: center;
-            padding: 10px;
-            background: #fff;
+            padding: 15px;
+            background: #ffffff; /* Weißer Hintergrund für den QR-Code (wichtig für Scanbarkeit!) */
+            border-radius: 12px;
+            margin: 0 auto;
+            width: fit-content;
         }
 
         #status-bar { 
-            margin-top: 20px;
+            margin-top: 25px;
             padding-top: 15px;
-            border-top: 1px solid #eee;
-            font-size: 0.75rem;
-            color: #999;
+            border-top: 1px solid #333;
+            font-size: 0.8rem;
+            color: #888;
         }
 
         .live-dot {
-            height: 8px;
-            width: 8px;
-            background-color: #28a745;
+            height: 10px;
+            width: 10px;
+            background-color: #00e676; /* Leuchtendes Grün */
             border-radius: 50%;
             display: inline-block;
-            margin-right: 5px;
+            margin-right: 8px;
+            box-shadow: 0 0 10px rgba(0, 230, 118, 0.5);
             animation: blink 2s infinite;
         }
 
         @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Fehlermeldung im Dark Mode */
+        .error-text {
+            color: #ff5252;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -74,7 +87,7 @@
 
     <div class="terminal-card">
         <h2>Anwesenheit</h2>
-        <p class="hint">Code scanen zum Einchecken</p>
+        <p class="hint">Code scannen zum Einchecken</p>
         
         <div id="qrcode"></div>
         
@@ -91,8 +104,10 @@
 
         async function refresh() {
             try {
-                // Nutzt exakt die Route aus deinem Log
+                // Nutzt die Route aus deiner app.py
                 const response = await fetch('/get_qr_token');
+                if (!response.ok) throw new Error("Server nicht erreichbar");
+                
                 const data = await response.json();
 
                 if (data.qr_string) {
@@ -101,23 +116,28 @@
                             text: data.qr_string,
                             width: 220,
                             height: 220,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
                             correctLevel: QRCode.CorrectLevel.M
                         });
                     } else {
                         qrGenerator.makeCode(data.qr_string);
                     }
                     timeText.innerText = "Letztes Update: " + new Date().toLocaleTimeString();
+                    timeText.classList.remove("error-text");
                 }
             } catch (err) {
-                timeText.innerText = "Fehler: Backend nicht erreichbar";
+                timeText.innerText = "Fehler: Verbindung unterbrochen";
+                timeText.classList.add("error-text");
                 console.error("Update failed", err);
             }
         }
 
-        // Automatischer Start
+        // Startet sofort beim Laden
         document.addEventListener("DOMContentLoaded", () => {
             refresh();
-            setInterval(refresh, 15000); // 15 Sekunden Intervall
+            // Intervall 15 Sekunden
+            setInterval(refresh, 15000);
         });
     </script>
 </body>
