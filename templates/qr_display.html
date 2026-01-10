@@ -3,102 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR-Terminal | Live Anzeige</title>
+    <title>Anwesenheit Terminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        /* KEIN FULLSCREEN MEHR */
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background-color: #f8f9fa; 
+            margin: 0; 
+            padding: 40px 20px; /* Abstand von oben/unten */
             display: flex; 
             justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
+            align-items: flex-start; /* Karte klebt nicht in der Mitte der Vertikalen */
         }
-        .container { 
+
+        .qr-card { 
             background: white; 
-            padding: 40px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
-            text-align: center; 
-            max-width: 400px;
-            width: 90%;
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            text-align: center;
+            max-width: 320px; /* Begrenzte Breite für kompakte Ansicht */
+            width: 100%;
         }
-        h2 { color: #1c1e21; margin-bottom: 10px; }
-        .description { color: #606770; margin-bottom: 30px; }
-        
-        /* Container für den QR-Code */
+
+        h2 { 
+            color: #333; 
+            font-size: 1.4rem; 
+            margin-bottom: 5px;
+            margin-top: 0;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
         #qrcode { 
             margin: 0 auto;
             display: flex;
             justify-content: center;
+            /* Container Größe fixieren, um Springen beim Laden zu verhindern */
+            min-height: 200px; 
         }
-        
+
         #status { 
-            margin-top: 25px; 
-            font-size: 0.85rem; 
-            color: #888; 
-            padding: 10px;
-            border-radius: 8px;
+            margin-top: 20px; 
+            font-size: 0.8rem; 
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
         }
-        .error-msg { 
-            color: #d93025 !important; 
-            background: #fce8e6; 
-        }
+
+        .error { color: #dc3545; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>Anwesenheit scannen</h2>
-        <p class="description">Der Code wird automatisch alle 15 Sekunden aktualisiert.</p>
+    <div class="qr-card">
+        <h2>QR-Terminal</h2>
+        <p class="subtitle">Anwesenheit erfassen</p>
         
         <div id="qrcode"></div>
         
-        <p id="status">Verbindung wird hergestellt...</p>
+        <p id="status">Verbindung wird aufgebaut...</p>
     </div>
 
     <script>
         const qrContainer = document.getElementById("qrcode");
-        const statusText = document.getElementById("status");
-        let qrObject = null;
+        const statusElement = document.getElementById("status");
+        let qrCode = null;
 
-        // Funktion, die die Daten von der Python-Route /get_qr abruft
-        async function fetchQRCode() {
+        async function refreshQR() {
             try {
-                const response = await fetch('/get_qr');
+                // Pfad aus deinem Log: /get_qr_token
+                const response = await fetch('/get_qr_token');
                 
-                if (!response.ok) {
-                    throw new Error(`Server-Fehler: ${response.status}`);
-                }
+                if (!response.ok) throw new Error("Server-Antwort fehlerhaft");
                 
                 const data = await response.json();
 
                 if (data.qr_string) {
-                    if (qrObject === null) {
-                        // QR-Code beim ersten Mal initialisieren
-                        qrObject = new QRCode(qrContainer, {
+                    if (qrCode === null) {
+                        // QR-Code Objekt erstellen
+                        qrCode = new QRCode(qrContainer, {
                             text: data.qr_string,
-                            width: 250,
-                            height: 250,
+                            width: 200,
+                            height: 200,
                             colorDark : "#000000",
                             colorLight : "#ffffff",
-                            correctLevel : QRCode.CorrectLevel.H
+                            correctLevel : QRCode.CorrectLevel.M
                         });
                     } else {
-                        // Bestehenden Code mit neuen Daten aktualisieren
-                        qrObject.makeCode(data.qr_string);
+                        // Bestehenden Code aktualisieren
+                        qrCode.makeCode(data.qr_string);
                     }
-                    
-                    statusText.innerText = "Letztes Update: " + new Date().toLocaleTimeString();
-                    statusText.classList.remove("error-msg");
+                    statusElement.innerText = "Letztes Update: " + new Date().toLocaleTimeString();
+                    statusElement.classList.remove("error");
                 }
             } catch (err) {
-                console.error("Fetch-Fehler:", err);
-                statusText.innerText = "Fehler: Verbindung zum Server fehlgeschlagen.";
-                statusText.classList.add("error-msg");
+                console.error("Fehler:", err);
+                statusElement.innerText = "Verbindungsfehler zum Backend!";
+                statusElement.classList.add("error");
             }
         }
 
-        // --- AUTOMATISIERUNG ---
-        document.addEventListener("DOMContentLoaded
+        // Automatischer Start beim Laden
+        document.addEventListener("DOMContentLoaded", () => {
+            refreshQR();
+            // Intervall für automatische Erneuerung (z.B. alle 15 Sek)
+            setInterval(refreshQR, 15000);
+        });
+    </script>
+</body>
+</html>
