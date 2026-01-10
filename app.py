@@ -23,7 +23,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12)
 )
 
-# Datenbank-Anbindung
+# Datenbank-Anbindung (Render Postgres oder lokal SQLite)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///checkins.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -49,6 +49,7 @@ ADMIN_PASSWORT_HASH = generate_password_hash(os.environ.get('ADMIN_PASSWORD', 'd
 
 # --- HILFSFUNKTIONEN ---
 def get_current_qr_token():
+    # Erzeugt alle 30 Sekunden einen neuen Token basierend auf der Zeit
     time_step = int(datetime.now().timestamp() / 30)
     return hashlib.sha256(f"{QR_SECRET}{time_step}".encode()).hexdigest()[:10]
 
@@ -58,7 +59,12 @@ def is_mobile():
 
 # --- ROUTEN: FRONTEND (Check-In via QR) ---
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
+def root_redirect():
+    """Leitet die Startseite auf /display weiter, um 403-Fehler zu vermeiden."""
+    return redirect(url_for('display_qr'))
+
+@app.route('/checkin', methods=['GET', 'POST'])
 def index():
     if not is_mobile():
         return render_template('mobile_only.html'), 403
@@ -66,6 +72,7 @@ def index():
     user_token = request.args.get('token')
     current_token = get_current_qr_token()
     
+    # Validierung des aktuellen und des vorherigen Tokens (Toleranzfenster)
     prev_step = int(datetime.now().timestamp() / 30) - 1
     prev_token = hashlib.sha256(f"{QR_SECRET}{prev_step}".encode()).hexdigest()[:10]
 
@@ -86,33 +93,26 @@ def index():
     
     return render_template('index.html', token=user_token)
 
-# --- ROUTEN: TERMINAL & SCANNER (Ohne IP-Sperre) ---
+# --- ROUTEN: TERMINAL & SCANNER ---
 
 @app.route('/display')
 def display_qr():
+    """Zeigt das kompakte QR-Code Terminal an."""
     return render_template('qr_display.html')
-
-@app.route('/scanner')
-def scanner():
-    return render_template('scanner.html')
-
-@app.route('/quick-checkin')
-def quick_checkin():
-    m_id = request.args.get('id')
-    if not m_id or "_" not in m_id:
-        return "Ungültiger Code.", 400
-    parts = m_id.split('_')
-    vname, nname = parts[0], parts[1]
-    jetzt_berlin = datetime.now(BERLIN_TZ).replace(tzinfo=None)
-    db.session.add(CheckIn(vorname=vname, nachname=nname, datum=jetzt_berlin))
-    db.session.commit()
-    return render_template('quick_success.html', name=f"{vname} {nname}")
 
 @app.route('/get_qr_token')
 def get_token_api():
-    return jsonify({"token": get_current_qr_token()})
+    """Schnittstelle für das Terminal-JavaScript (JSON-Antwort)."""
+    token = get_current_qr_token()
+    # Generiert die URL, die im QR-Code enthalten sein soll
+    qr_url = url_for('index', token=token, _external=True)
+    return jsonify({
+        "status": "success",
+        "qr_string": qr_url,
+        "token": token
+    })
 
-# --- ADMIN BEREICH ---
+# --- ADMIN BEREICH & EXPORT ---
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -145,60 +145,26 @@ def dashboard():
     checkins = query.order_by(CheckIn.datum.desc()).all()
     return render_template('dashboard.html', checkins=checkins, search=search, date=date_val)
 
-# --- KORRIGIERTER EXPORT (Excel-Optimiert) ---
 @app.route('/export_csv')
 def export_csv():
     if not session.get('logged_in'):
         return redirect(url_for('admin'))
     
-    search = request.args.get('search', '').strip()
-    date_val = request.args.get('date', '')
-    
-    query = CheckIn.query
-    if search:
-        query = query.filter(or_(CheckIn.vorname.ilike(f'%{search}%'), CheckIn.nachname.ilike(f'%{search}%')))
-    if date_val:
-        query = query.filter(func.date(CheckIn.datum) == date_val)
-        
-    checkins = query.order_by(CheckIn.datum.desc()).all()
-    
+    query = CheckIn.query.order_by(CheckIn.datum.desc()).all()
     si = io.StringIO()
-    # Semikolon als Trenner für deutsches Excel
     cw = csv.writer(si, delimiter=';', quoting=csv.QUOTE_MINIMAL)
-    
-    # Kopfzeile mit getrennten Spalten
     cw.writerow(['Vorname', 'Nachname', 'Datum', 'Uhrzeit', 'Nachholen'])
     
-    for c in checkins:
+    for c in query:
         d_str = c.datum.strftime('%d.%m.%Y') if c.datum else ''
         t_str = c.datum.strftime('%H:%M') if c.datum else ''
-        
-        cw.writerow([
-            c.vorname, 
-            c.nachname, 
-            d_str, 
-            t_str, 
-            c.buerotag_nachholen
-        ])
+        cw.writerow([c.vorname, c.nachname, d_str, t_str, c.buerotag_nachholen])
     
-    # UTF-8-BOM (\\ufeff) hinzufügen für korrekte Umlaute in Excel
     csv_output = "\ufeff" + si.getvalue()
-    
     output = make_response(csv_output)
     output.headers["Content-Disposition"] = "attachment; filename=export_anwesenheit.csv"
     output.headers["Content-type"] = "text/csv; charset=utf-8"
     return output
-
-@app.route('/admin/delete/<int:id>')
-def delete_entry(id):
-    if not session.get('logged_in'):
-        return redirect(url_for('admin'))
-    
-    entry = CheckIn.query.get_or_404(id)
-    db.session.delete(entry)
-    db.session.commit()
-    
-    return redirect(url_for('dashboard', search=request.args.get('search'), date=request.args.get('date')))
 
 @app.route('/logout')
 def logout():
@@ -206,4 +172,6 @@ def logout():
     return redirect(url_for('admin'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    # Automatische Erkennung des Ports (wichtig für Render)
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
