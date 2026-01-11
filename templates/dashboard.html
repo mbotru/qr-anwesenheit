@@ -1,68 +1,108 @@
-<div class="admin-card upload-section">
-    <h3>Soll-Vorgaben verwalten</h3>
-    <p class="hint">Lade die <code>soll_tage.csv</code> hoch (Format: Nachname;Vorname;Soll)</p>
-    
-    <form action="{{ url_for('upload_soll') }}" method="post" enctype="multipart/form-data" class="upload-form">
-        <input type="file" name="file" accept=".csv" class="file-input">
-        <div class="button-group">
-            <button type="submit" class="btn-secondary">CSV hochladen</button>
-            
-            <a href="{{ url_for('export_csv', search=search, date=date) }}" class="btn-primary btn-export">
-                📊 Präsenzbericht herunterladen
-            </a>
-        </div>
-    </form>
+<div class="admin-card">
+    <div class="table-header">
+        <h3 style="margin: 0;">Letzte Check-ins</h3>
+        <span class="count-badge">{{ checkins|length }} Einträge</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Datum & Uhrzeit</th>
+                    <th>Name</th>
+                    <th>Nachholen</th>
+                    <th>Aktion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in checkins %}
+                <tr>
+                    <td class="time-col">
+                        <span class="date">{{ entry.datum.strftime('%d.%m.%Y') }}</span>
+                        <span class="time">{{ entry.datum.strftime('%H:%M') }}</span>
+                    </td>
+                    <td class="name-col"><strong>{{ entry.vorname }} {{ entry.nachname }}</strong></td>
+                    <td>
+                        <span class="badge {{ 'badge-yes' if entry.buerotag_nachholen == 'Ja' else 'badge-no' }}">
+                            {{ entry.buerotag_nachholen }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('delete_entry', id=entry.id) }}" 
+                           class="btn-delete" 
+                           onclick="return confirm('Eintrag wirklich löschen?')">🗑️</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <style>
-    /* Dark Mode Styling für die Admin-Elemente */
-    .admin-card {
-        background: #1e1e1e;
-        border: 1px solid #333;
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 30px;
-    }
-
-    .hint { color: #888; font-size: 0.85rem; margin-bottom: 15px; }
-
-    .btn-primary {
-        background-color: #00e676; /* Dein Terminal-Grün */
-        color: #000 !important;
-        font-weight: bold;
-        padding: 12px 20px;
-        border-radius: 8px;
-        text-decoration: none;
-        display: inline-block;
-        transition: transform 0.2s, background-color 0.2s;
-        border: none;
-    }
-
-    .btn-primary:hover {
-        background-color: #00c853;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);
-    }
-
-    .btn-secondary {
-        background-color: #333;
-        color: white;
-        padding: 10px 15px;
-        border-radius: 8px;
-        border: 1px solid #444;
-        cursor: pointer;
-        margin-right: 10px;
-    }
-
-    .button-group {
-        margin-top: 15px;
+    /* Kompaktes Tabellen-Styling */
+    .table-header {
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        gap: 15px;
+        margin-bottom: 15px;
     }
 
-    .file-input {
-        color: #ccc;
+    .count-badge {
+        background: #333;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        color: #00e676;
+    }
+
+    .compact-table {
+        width: 100%;
+        border-collapse: collapse;
         font-size: 0.9rem;
+    }
+
+    .compact-table th {
+        text-align: left;
+        color: #888;
+        padding: 10px;
+        border-bottom: 2px solid #333;
+        font-weight: 500;
+    }
+
+    .compact-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #2a2a2a;
+        color: #ccc;
+    }
+
+    /* Spalten-Spezialstyles */
+    .time-col { white-space: nowrap; }
+    .date { color: #fff; margin-right: 5px; }
+    .time { color: #666; font-size: 0.8rem; }
+
+    .name-col { color: #fff; }
+
+    /* Badges für "Nachholen" */
+    .badge {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .badge-yes { background: #ffc107; color: #000; }
+    .badge-no { background: #333; color: #888; }
+
+    /* Delete Button */
+    .btn-delete {
+        text-decoration: none;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+    }
+    .btn-delete:hover { opacity: 1; }
+
+    .table-responsive {
+        max-height: 500px;
+        overflow-y: auto;
     }
 </style>
