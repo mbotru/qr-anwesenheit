@@ -1,188 +1,68 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Anwesenheit</title>
-    <style>
-        /* Modernes Dark Theme */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: #0a0a0a; 
-            color: #e0e0e0; 
-            display: flex; 
-            justify-content: center; 
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container { 
-            background: #111; 
-            padding: 30px; 
-            border-radius: 16px; 
-            box-shadow: 0 10px 40px rgba(0, 255, 255, 0.15); 
-            max-width: 1100px; 
-            width: 100%; 
-        }
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 30px; 
-            border-bottom: 1px solid #222; 
-            padding-bottom: 20px; 
-        }
-        h1 { color: #00ffff; font-size: 1.8rem; letter-spacing: 1px; }
-        .logout-btn { 
-            color: #ff4444; 
-            text-decoration: none; 
-            border: 1px solid #ff4444; 
-            padding: 8px 18px; 
-            border-radius: 8px; 
-            font-size: 14px; 
-            font-weight: bold;
-            transition: all 0.3s; 
-        }
-        .logout-btn:hover { background: #ff4444; color: white; }
-        
-        /* Filter Bereich */
-        .filter-area { 
-            background: #1a1a1a; 
-            padding: 25px; 
-            border-radius: 12px; 
-            margin-bottom: 30px; 
-            border: 1px solid #333; 
-        }
-        .filter-form { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 20px; 
-            align-items: flex-end; 
-        }
-        .input-group { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
-        label { font-size: 13px; color: #888; text-transform: uppercase; font-weight: bold; }
-        input { 
-            padding: 12px; 
-            border-radius: 8px; 
-            border: 1px solid #333; 
-            background: #222; 
-            color: white; 
-            font-size: 15px;
-            outline: none;
-            transition: border 0.3s;
-        }
-        input:focus { border-color: #00ffff; }
-        
-        .btn-group { display: flex; gap: 10px; }
-        .btn { 
-            padding: 12px 20px; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            border: none; 
-            text-decoration: none; 
-            font-size: 14px; 
-            transition: transform 0.2s, background 0.2s; 
-        }
-        .btn-filter { background: #00ffff; color: #111; }
-        .btn-filter:hover { background: #00cccc; transform: translateY(-1px); }
-        .btn-export { background: #333; color: #00ffff; border: 1px solid #00ffff; }
-        .btn-export:hover { background: #00ffff; color: #111; }
-        .btn-reset { color: #666; text-decoration: none; font-size: 13px; padding-bottom: 5px; }
-        .btn-reset:hover { color: #aaa; }
-
-        /* Tabelle */
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; color: #00ffff; padding: 15px 10px; border-bottom: 2px solid #222; font-size: 14px; }
-        td { padding: 15px 10px; border-bottom: 1px solid #222; font-size: 15px; }
-        tr:hover { background: rgba(255, 255, 255, 0.02); }
-        
-        .btn-delete { 
-            color: #ff4444; 
-            text-decoration: none; 
-            border: 1px solid #ff4444; 
-            padding: 5px 12px; 
-            border-radius: 6px; 
-            font-size: 12px; 
-            transition: 0.3s; 
-        }
-        .btn-delete:hover { background: #ff4444; color: white; }
-        
-        /* Status-Meldung */
-        .result-count { margin-bottom: 15px; font-size: 14px; color: #888; }
-
-        @media (max-width: 768px) {
-            .filter-form { flex-direction: column; align-items: stretch; }
-            .btn-group { flex-direction: column; }
-            h1 { font-size: 1.4rem; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Check-In Dashboard</h1>
-            <a href="/logout" class="logout-btn">Abmelden</a>
+<div class="admin-card upload-section">
+    <h3>Soll-Vorgaben verwalten</h3>
+    <p class="hint">Lade die <code>soll_tage.csv</code> hoch (Format: Nachname;Vorname;Soll)</p>
+    
+    <form action="{{ url_for('upload_soll') }}" method="post" enctype="multipart/form-data" class="upload-form">
+        <input type="file" name="file" accept=".csv" class="file-input">
+        <div class="button-group">
+            <button type="submit" class="btn-secondary">CSV hochladen</button>
+            
+            <a href="{{ url_for('export_csv', search=search, date=date) }}" class="btn-primary btn-export">
+                📊 Präsenzbericht herunterladen
+            </a>
         </div>
+    </form>
+</div>
 
-        <div class="filter-area">
-            <form action="/dashboard" method="GET" class="filter-form">
-                <div class="input-group">
-                    <label>Mitarbeiter suchen</label>
-                    <input type="text" name="search" value="{{ search }}" placeholder="Vorname, Nachname oder beides...">
-                </div>
-                <div class="input-group" style="flex: 0; min-width: 180px;">
-                    <label>Datum</label>
-                    <input type="date" name="date" value="{{ date }}">
-                </div>
-                <div class="btn-group">
-                    <button type="submit" class="btn btn-filter">Filtern</button>
-                    <a href="{{ url_for('export_csv', search=search, date=date) }}" class="btn btn-export">CSV Export</a>
-                </div>
-                <a href="/dashboard" class="btn-reset">Filter zurücksetzen</a>
-            </form>
-        </div>
+<style>
+    /* Dark Mode Styling für die Admin-Elemente */
+    .admin-card {
+        background: #1e1e1e;
+        border: 1px solid #333;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+    }
 
-        <div class="result-count">
-            {{ checkins|length }} Einträge gefunden
-            {% if search or date %} (gefiltert) {% endif %}
-        </div>
+    .hint { color: #888; font-size: 0.85rem; margin-bottom: 15px; }
 
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Vorname</th>
-                        <th>Nachname</th>
-                        <th>Büro nachholen</th>
-                        <th>Datum & Uhrzeit (Berlin)</th>
-                        <th style="text-align: right;">Aktion</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in checkins %}
-                    <tr>
-                        <td>{{ entry.vorname }}</td>
-                        <td>{{ entry.nachname }}</td>
-                        <td>{{ entry.buerotag_nachholen }}</td>
-                        <td>{{ entry.datum.strftime('%d.%m.%Y %H:%M') }}</td>
-                        <td style="text-align: right;">
-                            <a href="{{ url_for('delete_entry', id=entry.id, search=search, date=date) }}" 
-                               class="btn-delete" 
-                               onclick="return confirm('Diesen Eintrag wirklich löschen?')">Löschen</a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 40px; color: #555;">
-                            Keine Datensätze vorhanden.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+    .btn-primary {
+        background-color: #00e676; /* Dein Terminal-Grün */
+        color: #000 !important;
+        font-weight: bold;
+        padding: 12px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: transform 0.2s, background-color 0.2s;
+        border: none;
+    }
+
+    .btn-primary:hover {
+        background-color: #00c853;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);
+    }
+
+    .btn-secondary {
+        background-color: #333;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid #444;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+
+    .button-group {
+        margin-top: 15px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .file-input {
+        color: #ccc;
+        font-size: 0.9rem;
+    }
+</style>
