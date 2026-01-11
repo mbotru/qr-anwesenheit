@@ -1,33 +1,32 @@
-Nachname	Vorname	Soll
-Abou Hussein-Zürcher	Ruth	2
-Alonso Posada 	Estefania	2
-Botrugno	Marco	2
-Carco	Michele	2
-Ciarmoli	Antonello	2
-de Jesus Silva	Nuno	2
-Duricova	Klara	2
-Esteves Rocha	Hugo	2
-Greco	Antonio	1
-Ghezzani	Nicolo	2
-Hagmann	Samson	2
-Heller	Thomas	0
-Hoxha 	Deivis	2
-Mortali	Ivan	2
-Rugiano	Tomaso	2
-Eichenberger	Leon	2
-Schumacher	Renato	2
-Spinosi	Steven	2
-Ueltschi	Reto	2
-Aisagbonhi	Lincoln	2
-Baumann	Urs	0
-Celik	Burak	2
-Espana Ortiz	Armando	2
-Frei	Sascha	2
-Isler	Marcel	1
-Kenkatharan	Kajitha	2
-Nageswaran	Nithursan	2
-Ngnassoke	Alexandre	2
-Wüthrich	Marc	2
-Zeitner	Richard	1
-Pirapakaran	Mautisan	2
-
+Nachname;Vorname;Soll
+Abou Hussein-Zürcher;Ruth;2
+Alonso Posada ;Estefania;2
+Botrugno;Marco;2
+Carco;Michele;2
+Ciarmoli;Antonello;2
+de Jesus Silva;Nuno;2
+Duricova;Klara;2
+Esteves Rocha;Hugo;2
+Greco;Antonio;1
+Ghezzani;Nicolo;2
+Hagmann;Samson;2
+Heller;Thomas;0
+Hoxha ;Deivis;2
+Mortali;Ivan;2
+Rugiano;Tomaso;2
+Eichenberger;Leon;2
+Schumacher;Renato;2
+Spinosi;Steven;2
+Ueltschi;Reto;2
+Aisagbonhi;Lincoln;2
+Baumann;Urs;0
+Celik;Burak;2
+Espana Ortiz;Armando;2
+Frei;Sascha;2
+Isler;Marcel;1
+Kenkatharan;Kajitha;2
+Nageswaran;Nithursan;2
+Ngnassoke;Alexandre;2
+Wüthrich;Marc;2
+Zeitner;Richard;1
+Pirapakaran;Mautisan;2
