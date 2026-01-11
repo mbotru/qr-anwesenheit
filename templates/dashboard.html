@@ -1,108 +1,102 @@
-<div class="admin-card">
-    <div class="table-header">
-        <h3 style="margin: 0;">Letzte Check-ins</h3>
-        <span class="count-badge">{{ checkins|length }} Einträge</span>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        
+        /* Stats */
+        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: #1e1e1e; border: 1px solid #333; padding: 20px; border-radius: 12px; text-align: center; }
+        .stat-label { color: #888; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        .stat-value { color: #00e676; font-size: 1.8rem; font-weight: bold; }
+
+        /* Cards */
+        .admin-card { background: #1e1e1e; border: 1px solid #333; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        
+        /* Form & Buttons */
+        .button-group { display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap; }
+        .btn-primary { background: #00e676; color: #000; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; text-decoration: none; cursor: pointer; }
+        .btn-secondary { background: #333; color: white; border: 1px solid #444; padding: 10px 15px; border-radius: 8px; cursor: pointer; }
+        
+        /* Table */
+        .table-responsive { max-height: 400px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { text-align: left; color: #888; padding: 12px; border-bottom: 2px solid #333; }
+        td { padding: 10px; border-bottom: 1px solid #2a2a2a; }
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+        .badge-yes { background: #ffc107; color: #000; }
+        
+        input[type="text"], input[type="date"] { background: #2a2a2a; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <a href="{{ url_for('logout') }}" style="color: #ff5252;">Abmelden</a>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <span class="stat-label">Heute anwesend</span>
+                <span class="stat-value">{{ anzahl_heute }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Davon Nachholer</span>
+                <span class="stat-value" style="color: #ffc107;">{{ nachholen_anzahl }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Letzter Scan</span>
+                <span class="stat-value" style="font-size: 1.2rem;">{{ letzter_name }}</span>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <h3>Soll-Vorgaben & Berichte</h3>
+            <form action="{{ url_for('upload_soll') }}" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".csv" style="color: #888;">
+                <div class="button-group">
+                    <button type="submit" class="btn-secondary">Soll-Liste hochladen</button>
+                    <a href="{{ url_for('export_csv') }}" class="btn-primary">📊 Präsenzbericht herunterladen</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="admin-card">
+            <form method="get" class="button-group">
+                <input type="text" name="search" placeholder="Name suchen..." value="{{ search }}">
+                <input type="date" name="date" value="{{ date }}">
+                <button type="submit" class="btn-secondary">Filtern</button>
+            </form>
+            <br>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Zeit</th>
+                            <th>Name</th>
+                            <th>Nachholen</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in checkins %}
+                        <tr>
+                            <td>{{ entry.datum.strftime('%d.%m. %H:%M') }}</td>
+                            <td><strong>{{ entry.vorname }} {{ entry.nachname }}</strong></td>
+                            <td>{% if entry.buerotag_nachholen == 'Ja' %}<span class="badge badge-yes">Ja</span>{% else %}Nein{% endif %}</td>
+                            <td><a href="{{ url_for('delete_entry', id=entry.id) }}" onclick="return confirm('Löschen?')">🗑️</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-
-    <div class="table-responsive">
-        <table class="compact-table">
-            <thead>
-                <tr>
-                    <th>Datum & Uhrzeit</th>
-                    <th>Name</th>
-                    <th>Nachholen</th>
-                    <th>Aktion</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in checkins %}
-                <tr>
-                    <td class="time-col">
-                        <span class="date">{{ entry.datum.strftime('%d.%m.%Y') }}</span>
-                        <span class="time">{{ entry.datum.strftime('%H:%M') }}</span>
-                    </td>
-                    <td class="name-col"><strong>{{ entry.vorname }} {{ entry.nachname }}</strong></td>
-                    <td>
-                        <span class="badge {{ 'badge-yes' if entry.buerotag_nachholen == 'Ja' else 'badge-no' }}">
-                            {{ entry.buerotag_nachholen }}
-                        </span>
-                    </td>
-                    <td>
-                        <a href="{{ url_for('delete_entry', id=entry.id) }}" 
-                           class="btn-delete" 
-                           onclick="return confirm('Eintrag wirklich löschen?')">🗑️</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<style>
-    /* Kompaktes Tabellen-Styling */
-    .table-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-
-    .count-badge {
-        background: #333;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        color: #00e676;
-    }
-
-    .compact-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.9rem;
-    }
-
-    .compact-table th {
-        text-align: left;
-        color: #888;
-        padding: 10px;
-        border-bottom: 2px solid #333;
-        font-weight: 500;
-    }
-
-    .compact-table td {
-        padding: 8px 10px;
-        border-bottom: 1px solid #2a2a2a;
-        color: #ccc;
-    }
-
-    /* Spalten-Spezialstyles */
-    .time-col { white-space: nowrap; }
-    .date { color: #fff; margin-right: 5px; }
-    .time { color: #666; font-size: 0.8rem; }
-
-    .name-col { color: #fff; }
-
-    /* Badges für "Nachholen" */
-    .badge {
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: bold;
-    }
-    .badge-yes { background: #ffc107; color: #000; }
-    .badge-no { background: #333; color: #888; }
-
-    /* Delete Button */
-    .btn-delete {
-        text-decoration: none;
-        opacity: 0.5;
-        transition: opacity 0.2s;
-    }
-    .btn-delete:hover { opacity: 1; }
-
-    .table-responsive {
-        max-height: 500px;
-        overflow-y: auto;
-    }
-</style>
+</body>
+</html>
