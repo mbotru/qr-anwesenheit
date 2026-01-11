@@ -134,12 +134,16 @@ def dashboard():
 
 @app.route('/admin/upload_soll', methods=['POST'])
 def upload_soll():
-    if not session.get('logged_in'): return redirect(url_for('admin'))
+    if not session.get('logged_in'):
+        return redirect(url_for('admin'))
+    
     file = request.files.get('file')
     if file and file.filename.endswith('.csv'):
-        file.save(SOLL_DATEI_PFAD)
-        return redirect(url_for('dashboard'))
-    return "Fehler: Nur CSV erlaubt", 400
+        # Speichert die Datei direkt im Root-Verzeichnis
+        file.save(os.path.join(os.path.dirname(__file__), 'soll_tage.csv'))
+        return redirect(url_for('dashboard')) # Zurück zum Dashboard
+    
+    return "Bitte eine gültige CSV-Datei auswählen", 400
 
 @app.route('/export_csv')
 def export_csv():
